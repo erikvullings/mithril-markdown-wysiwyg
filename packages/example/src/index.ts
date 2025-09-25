@@ -195,38 +195,125 @@ const App = () => {
         ]),
 
         m("div.demo-section", [
+          m("h2", "Usage Examples"),
+          m("div", [
+            m("h3", "Basic Setup"),
+            m(
+              "pre",
+              m(
+                "code",
+                `import m from "mithril";
+import { MarkdownEditor } from "mithril-markdown-wysiwyg";
+import "mithril-markdown-wysiwyg/dist/index.css";
+
+const App = () => {
+  let content = "# Hello World";
+
+  return {
+    view: () =>
+      m(MarkdownEditor, {
+        content,
+        onContentChange: (newContent) => {
+          content = newContent;
+        },
+        placeholder: "Start writing...",
+        theme: "light",
+        toolbar: true,
+        showTabs: true
+      })
+  };
+};`,
+              ),
+            ),
+
+            m("h3", "With Custom Renderer"),
+            m(
+              "pre",
+              m(
+                "code",
+                `import { marked } from "marked";
+
+const App = () => {
+  let content = "";
+
+  return {
+    view: () =>
+      m(MarkdownEditor, {
+        content,
+        onContentChange: (newContent) => content = newContent,
+        markdownToHtml: (markdown) => marked.parse(markdown),
+        theme: "dark"
+      })
+  };
+};`,
+              ),
+            ),
+
+            m("h3", "Configuration Options"),
+            m(
+              "pre",
+              m(
+                "code",
+                `interface MarkdownEditorAttrs {
+  content: string;                           // Required
+  mode?: "wysiwyg" | "markdown";            // Default: "wysiwyg"
+  theme?: "light" | "dark";                 // Default: "light"
+  toolbar?: boolean;                        // Default: true
+  showTabs?: boolean;                       // Default: true
+  isPreview?: boolean;                      // Default: false
+  placeholder?: string;
+  markdownToHtml?: (md: string) => string;  // Optional renderer
+  htmlToMarkdown?: (html: string) => string; // Optional converter
+  onContentChange?: (content: string) => void;
+  onModeChange?: (mode: string) => void;
+}`,
+              ),
+            ),
+          ]),
+        ]),
+
+        m("div.demo-section", [
           m("h2", "About the Implementation"),
           m("div", [
             m("h3", "Key Features:"),
             m("ul", [
               m(
                 "li",
-                "Dependency injection: markdown renderers are injected, not bundled",
+                "🔧 Dependency injection: markdown renderers are injected, not bundled",
               ),
               m(
                 "li",
-                "No conversion corruption: content is preserved when switching modes",
+                "🔄 No conversion corruption: content is preserved when switching modes",
               ),
               m(
                 "li",
-                "Pluggable renderers: Use marked.js, slimdown-js, or any custom renderer",
+                "🔌 Pluggable renderers: Use marked.js, slimdown-js, or any custom renderer",
               ),
-              m("li", "Clean architecture: lib has zero dependencies"),
-              m("li", "Full toolbar with proper grouping and separators"),
-              m("li", "Dark theme support with proper contrast"),
+              m("li", "📦 Clean architecture: lib has zero dependencies"),
+              m("li", "🛠️ Full toolbar with proper grouping and separators"),
+              m("li", "🌓 Dark theme support with proper contrast"),
+              m("li", "📱 Responsive design for mobile and desktop"),
+              m("li", "♿ Keyboard navigation and accessibility support"),
+              m(
+                "li",
+                "🎛️ Configurable UI: hide tabs, toolbar, or customize themes",
+              ),
+              m("li", "🔍 Built-in empty content handling"),
             ]),
             m("h3", "Renderers:"),
             m("ul", [
-              m(
-                "li",
+              m("li", [
                 m("strong", "marked.js"),
                 ": Full-featured GitHub-flavored markdown with table support",
-              ),
-              m(
-                "li",
+              ]),
+              m("li", [
                 m("strong", "slimdown-js"),
                 ": Lightweight, fast markdown renderer",
-              ),
+              ]),
+              m("li", [
+                m("strong", "Custom"),
+                ": Bring your own renderer - any function that converts markdown to HTML",
+              ]),
             ]),
           ]),
         ]),

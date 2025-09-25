@@ -7,6 +7,14 @@
     "build": "pnpm -r build",
     "dev": "pnpm -r dev",
     "start": "pnpm dev",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "build:lib": "pnpm -C packages/lib build",
+    "build:example": "pnpm -C packages/example build",
+    "build:docs": "pnpm build:example",
+    "release:lib": "pnpm -C packages/lib publish",
+    "release:patch": "pnpm -C packages/lib version patch && pnpm release:lib",
+    "release:minor": "pnpm -C packages/lib version minor && pnpm release:lib",
+    "release:major": "pnpm -C packages/lib version major && pnpm release:lib",
+    "prepare": "pnpm build:lib"
   }
 }

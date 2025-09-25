@@ -1,146 +1,290 @@
 # Mithril Markdown WYSIWYG Editor
 
-A powerful WYSIWYG markdown editor built with Mithril.js, inspired by the [markdown-wysiwyg](https://github.com/celsowm/markdown-wysiwyg) project.
+A powerful WYSIWYG markdown editor built with Mithril.js, featuring dual-mode editing, theme support, and extensive formatting options.
 
 ## Features
 
 - 🎨 **Dual Mode**: Switch seamlessly between WYSIWYG and Markdown modes
 - 🌓 **Theme Support**: Light and dark themes included
 - 🛠️ **Rich Toolbar**: Full formatting options including bold, italic, headers, lists, links, images, and tables
-- ⚡ **Fast & Lightweight**: Built with Rollup for optimal bundle size
 - 📱 **Responsive**: Works great on desktop and mobile devices
 - 🎯 **TypeScript**: Full TypeScript support with proper type definitions
+- 🔧 **Pluggable Renderers**: Use any markdown renderer (marked.js, slimdown-js, etc.)
+- ⚡ **Zero Dependencies**: Core library has no runtime dependencies
+- 🎛️ **Configurable**: Hide tabs, toolbar, or customize themes
+- 🌍 **Empty Content Handling**: Built-in empty content checks
 
 ## Demo
 
-Visit the [live demo](https://your-username.github.io/mithril-markdown-wysiwyg) to see the editor in action.
+Visit the [live demo](https://erikvullings.github.io/mithril-markdown-wysiwyg) to see the editor in action.
 
 ## Installation
 
 ```bash
-# Install the package
 npm install mithril-markdown-wysiwyg
-
-# or with pnpm
+# or
 pnpm add mithril-markdown-wysiwyg
-
-# or with yarn
+# or
 yarn add mithril-markdown-wysiwyg
 ```
 
-## Usage
+## Quick Start
 
 ### Basic Usage
 
 ```typescript
-import m from 'mithril';
-import { createMarkdownEditor } from 'mithril-markdown-wysiwyg';
+import m from 'mithril'
+import { MarkdownEditor } from 'mithril-markdown-wysiwyg'
+import 'mithril-markdown-wysiwyg/dist/index.css'
 
 const App = () => {
-  const editor = createMarkdownEditor({
-    theme: 'light',
-    mode: 'wysiwyg',
-    initialValue: '# Hello World\\n\\nStart writing your markdown here...',
-    onChange: (value) => {
-      console.log('Content changed:', value);
-    }
-  });
+  let content = '# Hello World\\n\\nStart writing your markdown here...'
 
   return {
-    view: () => m(editor.component, {
-      ...editor.options,
-      state: editor.states(),
-      actions: editor.actions
-    })
-  };
-};
+    view: () =>
+      m(MarkdownEditor, {
+        content,
+        onContentChange: (newContent: string) => {
+          content = newContent
+        },
+        placeholder: 'Start writing...',
+        theme: 'light',
+        toolbar: true,
+        showTabs: true,
+      }),
+  }
+}
 
-m.mount(document.body, App);
+m.mount(document.body, App)
 ```
 
-### Configuration Options
+### With External Markdown Renderer
 
 ```typescript
-interface EditorOptions {
-  theme?: 'light' | 'dark';           // Theme (default: 'light')
-  placeholder?: string;               // Placeholder text
-  toolbar?: boolean;                  // Show toolbar (default: true)
-  initialValue?: string;              // Initial content
-  onChange?: (value: string) => void; // Change callback
-  mode?: 'wysiwyg' | 'markdown';     // Initial mode (default: 'wysiwyg')
+import { marked } from 'marked'
+import { MarkdownEditor } from 'mithril-markdown-wysiwyg'
+
+// Configure marked for GitHub-flavored markdown
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+})
+
+const App = () => {
+  let content = ''
+
+  return {
+    view: () =>
+      m(MarkdownEditor, {
+        content,
+        onContentChange: (newContent: string) => {
+          content = newContent
+        },
+        // Provide your own markdown renderer
+        markdownToHtml: (markdown: string) => {
+          // Empty content is automatically handled by the editor
+          return marked.parse(markdown) as string
+        },
+        theme: 'dark',
+        mode: 'markdown',
+      }),
+  }
 }
 ```
 
-### Available Actions
-
-The editor exposes several actions you can use programmatically:
+### Advanced Configuration
 
 ```typescript
-const editor = createMarkdownEditor();
+import m from 'mithril'
+import { MarkdownEditor, MarkdownEditorAttrs } from 'mithril-markdown-wysiwyg'
+import { render as slimdownRender } from 'slimdown-js'
 
-// Toggle between light and dark themes
-editor.actions.toggleTheme();
+const App = () => {
+  let state = {
+    content: '',
+    mode: 'wysiwyg' as const,
+    theme: 'light' as const,
+    isPreview: false,
+  }
 
-// Toggle preview mode
-editor.actions.togglePreview();
+  const updateState = (updates: Partial<typeof state>) => {
+    state = { ...state, ...updates }
+    m.redraw()
+  }
 
-// Update editor content and state
-editor.actions.updateEditor({
-  content: 'New content',
-  mode: 'markdown'
-});
+  return {
+    view: () => [
+      // Controls
+      m('div.controls', [
+        m(
+          'button',
+          {
+            onclick: () =>
+              updateState({
+                theme: state.theme === 'light' ? 'dark' : 'light',
+              }),
+          },
+          'Toggle Theme',
+        ),
+
+        m(
+          'button',
+          {
+            onclick: () =>
+              updateState({
+                isPreview: !state.isPreview,
+              }),
+          },
+          'Toggle Preview',
+        ),
+      ]),
+
+      // Editor
+      m(MarkdownEditor, {
+        content: state.content,
+        mode: state.mode,
+        theme: state.theme,
+        isPreview: state.isPreview,
+        toolbar: true,
+        showTabs: true,
+        placeholder: 'Write your content here...',
+
+        // Custom renderer
+        markdownToHtml: (markdown: string) => slimdownRender(markdown),
+
+        // Event handlers
+        onContentChange: (content: string) => {
+          updateState({ content })
+          console.log('Content changed:', content.length, 'characters')
+        },
+
+        onModeChange: (mode: 'wysiwyg' | 'markdown') => {
+          updateState({ mode })
+          console.log('Mode changed to:', mode)
+        },
+      } as MarkdownEditorAttrs),
+    ],
+  }
+}
 ```
+
+## API Reference
+
+### MarkdownEditorAttrs Interface
+
+```typescript
+interface MarkdownEditorAttrs {
+  // Content
+  content: string // Editor content (required)
+
+  // Display options
+  mode?: 'wysiwyg' | 'markdown' // Edit mode (default: "wysiwyg")
+  theme?: 'light' | 'dark' // Theme (default: "light")
+  placeholder?: string // Placeholder text
+
+  // UI options
+  toolbar?: boolean // Show toolbar (default: true)
+  showTabs?: boolean // Show mode tabs (default: true)
+  isPreview?: boolean // Show preview pane (default: false)
+
+  // Renderers (optional - built-in fallback provided)
+  markdownToHtml?: (markdown: string) => string
+  htmlToMarkdown?: (html: string) => string
+
+  // Event handlers
+  onContentChange?: (content: string) => void
+  onModeChange?: (mode: 'wysiwyg' | 'markdown') => void
+  onTogglePreview?: () => void
+  onToggleTheme?: () => void
+}
+```
+
+### Key Features
+
+#### Empty Content Handling
+
+The editor automatically handles empty content scenarios. You don't need to check for empty strings in your markdown renderer:
+
+```typescript
+// ❌ Before - you had to do this in your renderer
+markdownToHtml: (markdown: string) => {
+  if (!markdown || markdown.trim() === '') {
+    return ''
+  }
+  return marked.parse(markdown)
+}
+
+// ✅ Now - the editor handles it automatically
+markdownToHtml: (markdown: string) => marked.parse(markdown)
+```
+
+#### Tabs Control
+
+Hide the mode switching tabs if you want a single-mode editor:
+
+```typescript
+m(MarkdownEditor, {
+  content,
+  showTabs: false, // Hides Visual/Markdown tabs
+  mode: 'wysiwyg', // Locks to WYSIWYG mode
+  onContentChange: (content) => {
+    /* ... */
+  },
+})
+```
+
+#### Theme Switching
+
+```typescript
+// Light theme (default)
+m(MarkdownEditor, { theme: 'light' /* ... */ })
+
+// Dark theme
+m(MarkdownEditor, { theme: 'dark' /* ... */ })
+```
+
+## Supported Formatting
+
+The editor supports all standard markdown formatting:
+
+- **Text formatting**: Bold, italic, strikethrough
+- **Headers**: H1 through H6
+- **Lists**: Ordered, unordered, and task lists
+- **Links and images**: With modal dialogs for easy insertion
+- **Code**: Inline code and code blocks
+- **Tables**: Full table editing with context menu
+- **Block elements**: Blockquotes, horizontal rules
+- **Advanced**: Copy/paste, undo/redo, drag & drop
+
+## Browser Support
+
+- Chrome/Chromium 88+
+- Firefox 85+
+- Safari 14+
+- Edge 88+
 
 ## Development
 
-This is a monorepo with two packages:
-
-- `packages/lib` - The main library package
-- `packages/example` - Example application for testing
-
-### Setup
+### Building
 
 ```bash
 # Install dependencies
 pnpm install
 
-# Build the library
-pnpm -C packages/lib build
+# Build library
+pnpm build
 
-# Build the example app (outputs to docs/ for GitHub Pages)
-pnpm -C packages/example build
-
-# Run the example app in development mode
+# Run example in development
 pnpm -C packages/example dev
 ```
 
-### Scripts
+### Testing
 
 ```bash
-# Build all packages
+# Build and test
 pnpm build
-
-# Run development servers for all packages
-pnpm dev
-
-# Preview the built example
-http-server docs -p 3000
+pnpm test
 ```
-
-## Architecture
-
-### Library Package (`packages/lib`)
-
-- **TypeScript**: Full type safety
-- **Rollup**: Modern bundling with tree-shaking
-- **Marked**: Markdown parsing and rendering
-- **PostCSS**: CSS processing and optimization
-
-### Example Package (`packages/example`)
-
-- **Rspack**: Fast bundling for development and production
-- **TypeScript**: Type-safe development
-- **GitHub Pages**: Automatic deployment to `docs/` folder
 
 ## Contributing
 
@@ -156,6 +300,5 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- Inspired by [celsowm/markdown-wysiwyg](https://github.com/celsowm/markdown-wysiwyg)
 - Built with [Mithril.js](https://mithril.js.org/)
-- Uses [Marked](https://marked.js.org/) for markdown processing
+- Markdown rendering examples use [Marked](https://marked.js.org/) and [Slimdown.js](https://github.com/ianforth/slimdown-js)

@@ -1,6 +1,6 @@
 import m, { type FactoryComponent } from "mithril";
 import { MarkdownEditorAttrs, ToolbarButton } from "./types";
-import { toolbarButtonGroups } from "./toolbar-config";
+import { toolbarButtonGroups, createI18nToolbarConfig } from "./toolbar-config";
 import { EditorActions } from "./editor-actions";
 import { ImageModal } from "./components/image-modal";
 import { LinkModal } from "./components/link-modal";
@@ -9,6 +9,7 @@ import { TableMenu } from "./components/table-menu";
 import { DropdownMenu } from "./components/dropdown-menu";
 import { builtinHtmlToMarkdown } from "./utils/builtin-html-to-markdown";
 import { headingOptions, isDropdownButton } from "./toolbar-config";
+import { createI18n } from "./i18n";
 
 // Global cursor position storage to persist across re-renders
 const cursorPositionStorage = {
@@ -27,6 +28,17 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let markdownContent = "";
   let initialized = false;
   let editorActions: EditorActions | null = null;
+
+  // Helper function to safely render markdown with empty content check
+  const safeMarkdownToHtml = (
+    markdown: string,
+    markdownToHtml?: (markdown: string) => string,
+  ): string => {
+    if (!markdown || markdown.trim() === "") {
+      return "";
+    }
+    return markdownToHtml ? markdownToHtml(markdown) : markdown;
+  };
 
   // Modal states
   let showImageModal = false;
@@ -51,6 +63,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         mode = "wysiwyg",
         theme = "light",
         toolbar = true,
+        showTabs = true,
         placeholder = "Start writing...",
         content = "",
         isPreview = false,
@@ -71,7 +84,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         } else {
           // Content is markdown
           markdownContent = content;
-          wysiwygContent = markdownToHtml ? markdownToHtml(content) : content;
+          wysiwygContent = safeMarkdownToHtml(content, markdownToHtml);
         }
         initialized = true;
       }
@@ -88,9 +101,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
           onContentChange?.(markdownContent);
         } else {
           markdownContent = newContent;
-          wysiwygContent = markdownToHtml
-            ? markdownToHtml(newContent)
-            : newContent;
+          wysiwygContent = safeMarkdownToHtml(newContent, markdownToHtml);
           onContentChange?.(markdownContent);
         }
       };
@@ -112,9 +123,10 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
               : builtinHtmlToMarkdown(wysiwygContent);
           } else if (newMode === "wysiwyg" && mode === "markdown") {
             // Switching from markdown to WYSIWYG - convert markdown to HTML
-            if (markdownToHtml) {
-              wysiwygContent = markdownToHtml(markdownContent);
-            }
+            wysiwygContent = safeMarkdownToHtml(
+              markdownContent,
+              markdownToHtml,
+            );
           }
 
           editorActions?.setMode(newMode);
@@ -624,31 +636,32 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                   },
                 }),
           ]),
-          m(".md-tabs", [
-            m(
-              "button.md-tab-button",
-              {
-                type: "button",
-                class: mode === "wysiwyg" ? "active" : "",
-                onclick: () => handleModeChange("wysiwyg"),
-              },
-              "Visual",
-            ),
-            m(
-              "button.md-tab-button",
-              {
-                type: "button",
-                class: mode === "markdown" ? "active" : "",
-                onclick: () => handleModeChange("markdown"),
-              },
-              "Markdown",
-            ),
-          ]),
+          showTabs &&
+            m(".md-tabs", [
+              m(
+                "button.md-tab-button",
+                {
+                  type: "button",
+                  class: mode === "wysiwyg" ? "active" : "",
+                  onclick: () => handleModeChange("wysiwyg"),
+                },
+                "Visual",
+              ),
+              m(
+                "button.md-tab-button",
+                {
+                  type: "button",
+                  class: mode === "markdown" ? "active" : "",
+                  onclick: () => handleModeChange("markdown"),
+                },
+                "Markdown",
+              ),
+            ]),
           isPreview &&
             m(".editor-preview", {
               innerHTML:
-                mode === "markdown" && markdownToHtml
-                  ? markdownToHtml(markdownContent)
+                mode === "markdown"
+                  ? safeMarkdownToHtml(markdownContent, markdownToHtml)
                   : wysiwygContent,
             }),
 

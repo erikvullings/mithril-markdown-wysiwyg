@@ -328,3 +328,219 @@ export const isModalButton = (button: ToolbarButton): boolean => {
 export const isDropdownButton = (button: ToolbarButton): boolean => {
   return !!(button as any).dropdown;
 };
+
+// Create i18n-enabled toolbar configuration
+export const createI18nToolbarConfig = (
+  t: (key: keyof I18nStrings) => string,
+): ToolbarConfig => {
+  const i18nHeadingOptions = [
+    {
+      name: "paragraph",
+      icon: ICON_PARAGRAPH,
+      title: "Paragraph",
+      action: "paragraph",
+      shortcut: "Ctrl+0",
+    },
+    {
+      name: "heading-1",
+      icon: ICON_H1,
+      title: t("heading") + " 1",
+      action: "heading-1",
+      shortcut: "Ctrl+1",
+    },
+    {
+      name: "heading-2",
+      icon: ICON_H2,
+      title: t("heading") + " 2",
+      action: "heading-2",
+      shortcut: "Ctrl+2",
+    },
+    {
+      name: "heading-3",
+      icon: ICON_H3,
+      title: t("heading") + " 3",
+      action: "heading-3",
+      shortcut: "Ctrl+3",
+    },
+    {
+      name: "heading-4",
+      icon: ICON_H4,
+      title: t("heading") + " 4",
+      action: "heading-4",
+      shortcut: "Ctrl+4",
+    },
+    {
+      name: "heading-5",
+      icon: ICON_H5,
+      title: t("heading") + " 5",
+      action: "heading-5",
+      shortcut: "Ctrl+5",
+    },
+    {
+      name: "heading-6",
+      icon: ICON_H6,
+      title: t("heading") + " 6",
+      action: "heading-6",
+      shortcut: "Ctrl+6",
+    },
+  ];
+
+  const i18nToolbarButtonGroups = [
+    // Group 1: Heading dropdown
+    [
+      {
+        name: "heading-dropdown",
+        icon: ICON_HEADING_MENU + ICON_DROPDOWN,
+        title: t("heading"),
+        action: "toggleHeading",
+        dropdown: i18nHeadingOptions,
+        shortcut: "Ctrl+H",
+      },
+    ],
+    // Group 2: Text formatting
+    [
+      {
+        name: "bold",
+        icon: ICON_BOLD,
+        title: t("bold"),
+        action: "bold",
+        shortcut: "Ctrl+B",
+        toggle: true,
+      },
+      {
+        name: "italic",
+        icon: ICON_ITALIC,
+        title: t("italic"),
+        action: "italic",
+        shortcut: "Ctrl+I",
+        toggle: true,
+      },
+      {
+        name: "strikethrough",
+        icon: ICON_STRIKETHROUGH,
+        title: t("strikethrough"),
+        action: "strikethrough",
+        shortcut: "Ctrl+U",
+        toggle: true,
+      },
+    ],
+    // Group 3: Code and links
+    [
+      {
+        name: "link",
+        icon: ICON_LINK,
+        title: t("link"),
+        action: "link",
+        shortcut: "Ctrl+K",
+        modal: true,
+      },
+      {
+        name: "inline-code",
+        icon: ICON_INLINECODE,
+        title: t("inlineCode"),
+        action: "inlineCode",
+        shortcut: "Ctrl+`",
+        toggle: true,
+      },
+      {
+        name: "code-block",
+        icon: ICON_CODEBLOCK,
+        title: t("codeBlock"),
+        action: "codeBlock",
+        shortcut: "Ctrl+Shift+`",
+      },
+    ],
+    // Group 4: Lists and indentation
+    [
+      {
+        name: "unordered-list",
+        icon: ICON_UL,
+        title: t("unorderedList"),
+        action: "unorderedList",
+        shortcut: "Ctrl+L",
+        toggle: true,
+      },
+      {
+        name: "ordered-list",
+        icon: ICON_OL,
+        title: t("orderedList"),
+        action: "orderedList",
+        shortcut: "Ctrl+Shift+L",
+        toggle: true,
+      },
+      {
+        name: "outdent",
+        icon: ICON_OUTDENT,
+        title: "Decrease Indent",
+        action: "outdent",
+        shortcut: "Shift+Tab",
+      },
+      {
+        name: "indent",
+        icon: ICON_INDENT,
+        title: "Increase Indent",
+        action: "indent",
+        shortcut: "Tab",
+      },
+    ],
+    // Group 5: Blocks
+    [
+      {
+        name: "blockquote",
+        icon: ICON_BLOCKQUOTE,
+        title: t("blockquote"),
+        action: "blockquote",
+        shortcut: "Ctrl+Q",
+        toggle: true,
+      },
+      {
+        name: "horizontal-rule",
+        icon: ICON_HR,
+        title: t("horizontalRule"),
+        action: "horizontalRule",
+        shortcut: "Ctrl+R",
+      },
+    ],
+    // Group 6: Media
+    [
+      {
+        name: "image",
+        icon: ICON_IMAGE,
+        title: t("image"),
+        action: "image",
+        shortcut: "Ctrl+G",
+        modal: true,
+      },
+      {
+        name: "table",
+        icon: ICON_TABLE,
+        title: t("table"),
+        action: "table",
+        shortcut: "Ctrl+T",
+        modal: true,
+      },
+    ],
+    // Group 7: Utilities
+    [
+      {
+        name: "undo",
+        icon: ICON_UNDO,
+        title: t("undo"),
+        action: "undo",
+        shortcut: "Ctrl+Z",
+      },
+      {
+        name: "redo",
+        icon: ICON_REDO,
+        title: t("redo"),
+        action: "redo",
+        shortcut: "Ctrl+Y",
+      },
+    ],
+  ];
+
+  return {
+    groups: i18nToolbarButtonGroups,
+    compact: false,
+  };
+};
