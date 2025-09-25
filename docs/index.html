@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Mithril Markdown WYSIWYG Editor Demo</title><style>body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f6f8fa;
+        color: #24292e;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .demo-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .controls {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .theme-toggle {
+        padding: 8px 16px;
+        border: 1px solid #d0d7de;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+      }
+      .theme-toggle:hover {
+        background: #f3f4f6;
+      }
+      .dark-theme {
+        background-color: #0d1117;
+        color: #f0f6fc;
+      }
+      .dark-theme .demo-section {
+        background: #161b22;
+      }
+      .dark-theme .theme-toggle {
+        background: #21262d;
+        border-color: #30363d;
+        color: #f0f6fc;
+      }
+      .dark-theme .theme-toggle:hover {
+        background: #30363d;
+      }</style><script defer="defer" src="bundle.e3f44584f0b68af5.js"></script></head><body><div class="container"><div class="header"><h1>Mithril Markdown WYSIWYG Editor</h1><p>A powerful WYSIWYG markdown editor built with Mithril.js</p></div><div class="demo-section"><h2>Basic Editor</h2><div class="controls"><button class="theme-toggle" id="theme-toggle">Toggle Theme</button> <button class="theme-toggle" id="preview-toggle">Toggle Preview</button></div><div id="editor"></div></div><div class="demo-section"><h2>Minimal Editor (No Toolbar)</h2><div id="minimal-editor"></div></div></div></body></html>
