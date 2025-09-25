@@ -204,7 +204,6 @@ export const removeFormattingWYSIWYG: DOMAction = (element) => {
  * Check if undo is available
  */
 export const canUndoWYSIWYG = (element: ContentEditableElement): boolean => {
-  element.focus();
   return document.queryCommandEnabled("undo");
 };
 
@@ -212,7 +211,6 @@ export const canUndoWYSIWYG = (element: ContentEditableElement): boolean => {
  * Check if redo is available
  */
 export const canRedoWYSIWYG = (element: ContentEditableElement): boolean => {
-  element.focus();
   return document.queryCommandEnabled("redo");
 };
 

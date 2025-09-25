@@ -600,8 +600,11 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                       return false; // Prevent default context menu
                     }
                   },
-                  onclick: () => {
-                    // Close menus when clicking elsewhere
+                  onclick: (e: MouseEvent) => {
+                    // Close menus when clicking within the editor content area
+                    // Don't propagate this event to parent elements
+                    e.stopPropagation();
+
                     let needsRedraw = false;
 
                     if (showTableMenu) {
