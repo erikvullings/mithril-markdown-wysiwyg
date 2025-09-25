@@ -35,7 +35,7 @@ yarn add mithril-markdown-wysiwyg
 ```typescript
 import m from 'mithril'
 import { MarkdownEditor } from 'mithril-markdown-wysiwyg'
-import 'mithril-markdown-wysiwyg/dist/index.css'
+import 'mithril-markdown-wysiwyg/css' // or '/style.css' or '/dist/index.css'
 
 const App = () => {
   let content = '# Hello World\\n\\nStart writing your markdown here...'

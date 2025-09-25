@@ -1,6 +1,6 @@
 {
   "name": "mithril-markdown-wysiwyg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A powerful WYSIWYG markdown editor for Mithril.js with dual-mode editing, theme support, and extensive formatting options",
   "keywords": [
     "mithril",
@@ -35,10 +35,12 @@
       "types": "./dist/index.d.ts"
     },
     "./dist/index.css": "./dist/index.css",
+    "./css": "./dist/index.css",
+    "./style.css": "./dist/index.css",
     "./package.json": "./package.json"
   },
   "files": [
-    "dist",
+    "dist/**/*",
     "README.md",
     "LICENSE"
   ],

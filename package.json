@@ -1,6 +1,6 @@
 {
   "name": "mithril-markdown-wysiwyg",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A WYSIWYG markdown editor for Mithril.js",
   "private": true,
   "scripts": {
