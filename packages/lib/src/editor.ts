@@ -55,6 +55,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let showTableSelector = false;
   let showTableMenu = false;
   let tableMenuPosition = { x: 0, y: 0 };
+  let tableSelectorPosition = { x: 0, y: 0 };
 
   // Dropdown states
   let showDropdown = false;
@@ -577,6 +578,15 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             break;
           case "table":
             saveCursorPosition();
+            // Capture button position for table selector
+            const target = event?.target as HTMLElement;
+            if (target) {
+              const rect = target.getBoundingClientRect();
+              tableSelectorPosition = {
+                x: rect.left + rect.width / 2,
+                y: rect.bottom,
+              };
+            }
             showTableSelector = true;
             m.redraw();
             break;
@@ -808,6 +818,8 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
           m(TableSelector, {
             isOpen: showTableSelector,
+            position: tableSelectorPosition,
+            t,
             onClose: () => {
               showTableSelector = false;
               m.redraw();

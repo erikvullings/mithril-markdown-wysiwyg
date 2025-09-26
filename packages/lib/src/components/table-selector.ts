@@ -1,4 +1,5 @@
 import m from "mithril";
+import type { I18nStrings } from "../i18n";
 
 export interface TableSelectorAttrs {
   isOpen: boolean;
@@ -6,6 +7,8 @@ export interface TableSelectorAttrs {
   onSelect: (rows: number, cols: number) => void;
   maxRows?: number;
   maxCols?: number;
+  position?: { x: number; y: number };
+  t: (key: keyof I18nStrings) => string;
 }
 
 interface TableSelectorState {
@@ -20,7 +23,15 @@ export const TableSelector: m.Component<TableSelectorAttrs> = {
   },
 
   view: ({ state, attrs }: m.Vnode<TableSelectorAttrs, TableSelectorState>) => {
-    const { isOpen, onClose, onSelect, maxRows = 8, maxCols = 8 } = attrs;
+    const {
+      isOpen,
+      onClose,
+      onSelect,
+      maxRows = 8,
+      maxCols = 8,
+      position,
+      t,
+    } = attrs;
 
     if (!isOpen) return null;
 
@@ -78,10 +89,18 @@ export const TableSelector: m.Component<TableSelectorAttrs> = {
               padding: "15px",
               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
               zIndex: 1000,
-              // Position it relative to the toolbar button
-              top: "50px",
-              left: "50%",
-              transform: "translateX(-50%)",
+              // Position it relative to the toolbar button if position is provided
+              ...(position
+                ? {
+                    left: `${position.x}px`,
+                    top: `${position.y + 10}px`, // Offset below the button
+                    transform: "translateX(-50%)", // Center horizontally on the button
+                  }
+                : {
+                    top: "50px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                  }),
             },
             onclick: (e: Event) => e.stopPropagation(),
           },
@@ -99,10 +118,11 @@ export const TableSelector: m.Component<TableSelectorAttrs> = {
                 },
               },
               [
-                `${state.hoverRows} × ${state.hoverCols} Table`,
-                state.hoverRows === 0 &&
-                  state.hoverCols === 0 &&
-                  "Select table size",
+                state.hoverRows > 0 && state.hoverCols > 0
+                  ? t("tableSelectSize")
+                      .replace("{rows}", state.hoverRows.toString())
+                      .replace("{cols}", state.hoverCols.toString())
+                  : t("tableSelectSizeDefault"),
               ],
             ),
 
@@ -144,7 +164,7 @@ export const TableSelector: m.Component<TableSelectorAttrs> = {
                 },
               },
               [
-                m("div", "Click to insert table"),
+                m("div", t("tableClickToInsert")),
                 m(
                   "button",
                   {
@@ -159,8 +179,8 @@ export const TableSelector: m.Component<TableSelectorAttrs> = {
                       cursor: "pointer",
                     },
                     onclick: () => {
-                      const rows = prompt("Number of rows:", "3");
-                      const cols = prompt("Number of columns:", "3");
+                      const rows = prompt(t("tableCustomRowsPrompt"), "3");
+                      const cols = prompt(t("tableCustomColsPrompt"), "3");
                       if (rows && cols) {
                         const numRows = parseInt(rows);
                         const numCols = parseInt(cols);
@@ -176,7 +196,7 @@ export const TableSelector: m.Component<TableSelectorAttrs> = {
                       }
                     },
                   },
-                  "Custom size...",
+                  t("tableCustomSize"),
                 ),
               ],
             ),

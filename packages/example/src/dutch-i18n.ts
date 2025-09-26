@@ -57,4 +57,12 @@ export const dutchStrings: Partial<I18nStrings> = {
   imageAltPlaceholder: "Alt-tekst",
   imageUrlPlaceholder: "https://voorbeeld.nl/afbeelding.jpg",
   imageTitlePlaceholder: "Afbeelding titel",
+
+  // Table selector
+  tableSelectSize: "{rows} × {cols} Tabel",
+  tableSelectSizeDefault: "Selecteer tabelgrootte",
+  tableClickToInsert: "Klik om tabel in te voegen",
+  tableCustomSize: "Aangepaste grootte...",
+  tableCustomRowsPrompt: "Aantal rijen:",
+  tableCustomColsPrompt: "Aantal kolommen:",
 };

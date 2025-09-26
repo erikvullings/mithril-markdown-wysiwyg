@@ -52,6 +52,14 @@ export interface I18nStrings {
   imageAltPlaceholder: string;
   imageUrlPlaceholder: string;
   imageTitlePlaceholder: string;
+
+  // Table selector
+  tableSelectSize: string;
+  tableSelectSizeDefault: string;
+  tableClickToInsert: string;
+  tableCustomSize: string;
+  tableCustomRowsPrompt: string;
+  tableCustomColsPrompt: string;
 }
 
 export const defaultStrings: I18nStrings = {
@@ -108,6 +116,14 @@ export const defaultStrings: I18nStrings = {
   imageAltPlaceholder: "Alt text",
   imageUrlPlaceholder: "https://example.com/image.jpg",
   imageTitlePlaceholder: "Image title",
+
+  // Table selector
+  tableSelectSize: "{rows} × {cols} Table",
+  tableSelectSizeDefault: "Select table size",
+  tableClickToInsert: "Click to insert table",
+  tableCustomSize: "Custom size...",
+  tableCustomRowsPrompt: "Number of rows:",
+  tableCustomColsPrompt: "Number of columns:",
 };
 
 export const createI18n = (customStrings: Partial<I18nStrings> = {}) => {
