@@ -21,6 +21,7 @@ const cursorPositionStorage = {
     endContainer: Node;
     endOffset: number;
   } | null,
+  savedScrollPosition: null as { top: number; left: number } | null,
 };
 
 export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
@@ -170,6 +171,26 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
       // Function to save current cursor position
       const saveCursorPosition = () => {
+        // Save scroll position for both modes
+        const contentEditable = (editorActions as any)?.contentEditable;
+        const textarea = editorActions?.getTextarea();
+        const scrollElement = mode === "wysiwyg" ? contentEditable : textarea;
+
+        if (scrollElement) {
+          cursorPositionStorage.savedScrollPosition = {
+            top: scrollElement.scrollTop,
+            left: scrollElement.scrollLeft,
+          };
+          console.log("🔄 Saved scroll position:", {
+            mode,
+            scrollTop: scrollElement.scrollTop,
+            scrollLeft: scrollElement.scrollLeft,
+            elementType: scrollElement.tagName,
+          });
+        } else {
+          console.log("❌ No scroll element found for mode:", mode);
+        }
+
         if (
           mode === "markdown" &&
           document.activeElement instanceof HTMLTextAreaElement
@@ -294,9 +315,35 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                 }
               }
 
+              // Restore scroll position
+              if (cursorPositionStorage.savedScrollPosition) {
+                const contentEditable = (editorActions as any)?.contentEditable;
+                if (contentEditable) {
+                  console.log("🔄 Restoring scroll position (WYSIWYG):", {
+                    savedTop: cursorPositionStorage.savedScrollPosition.top,
+                    savedLeft: cursorPositionStorage.savedScrollPosition.left,
+                    currentTop: contentEditable.scrollTop,
+                    currentLeft: contentEditable.scrollLeft,
+                  });
+                  contentEditable.scrollTop =
+                    cursorPositionStorage.savedScrollPosition.top;
+                  contentEditable.scrollLeft =
+                    cursorPositionStorage.savedScrollPosition.left;
+                  console.log("🔄 After restore:", {
+                    newTop: contentEditable.scrollTop,
+                    newLeft: contentEditable.scrollLeft,
+                  });
+                } else {
+                  console.log("❌ No contentEditable found for scroll restore");
+                }
+              } else {
+                console.log("❌ No saved scroll position to restore");
+              }
+
               cursorPositionStorage.savedSelection = null;
               cursorPositionStorage.savedRange = null;
               cursorPositionStorage.savedRangeInfo = null;
+              cursorPositionStorage.savedScrollPosition = null;
               resolve();
             }, 10); // Slightly longer timeout for better reliability
           }
@@ -304,9 +351,35 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
           // Only clean up immediately for non-WYSIWYG modes
           // For WYSIWYG, cleanup happens after the async restore completes
           if (mode !== "wysiwyg" || !cursorPositionStorage.savedRange) {
+            // Restore scroll position for markdown mode
+            if (cursorPositionStorage.savedScrollPosition) {
+              const textarea = editorActions?.getTextarea();
+              if (textarea) {
+                console.log("🔄 Restoring scroll position (Markdown):", {
+                  savedTop: cursorPositionStorage.savedScrollPosition.top,
+                  savedLeft: cursorPositionStorage.savedScrollPosition.left,
+                  currentTop: textarea.scrollTop,
+                  currentLeft: textarea.scrollLeft,
+                });
+                textarea.scrollTop =
+                  cursorPositionStorage.savedScrollPosition.top;
+                textarea.scrollLeft =
+                  cursorPositionStorage.savedScrollPosition.left;
+                console.log("🔄 After restore (Markdown):", {
+                  newTop: textarea.scrollTop,
+                  newLeft: textarea.scrollLeft,
+                });
+              } else {
+                console.log("❌ No textarea found for scroll restore");
+              }
+            } else {
+              console.log("❌ No saved scroll position to restore (Markdown)");
+            }
+
             cursorPositionStorage.savedSelection = null;
             cursorPositionStorage.savedRange = null;
             cursorPositionStorage.savedRangeInfo = null;
+            cursorPositionStorage.savedScrollPosition = null;
             resolve();
           }
         }); // Close the Promise
