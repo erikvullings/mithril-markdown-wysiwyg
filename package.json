@@ -1,11 +1,11 @@
 {
   "name": "mithril-markdown-wysiwyg",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A WYSIWYG markdown editor for Mithril.js",
   "private": true,
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm -r dev",
+    "dev": "pnpm -r --parallel dev",
     "start": "pnpm dev",
     "test": "pnpm -r test",
     "build:lib": "pnpm -C packages/lib build",
