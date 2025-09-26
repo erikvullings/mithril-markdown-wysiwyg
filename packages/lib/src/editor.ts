@@ -7,7 +7,10 @@ import { LinkModal } from "./components/link-modal";
 import { TableSelector } from "./components/table-selector";
 import { TableMenu } from "./components/table-menu";
 import { DropdownMenu } from "./components/dropdown-menu";
-import { builtinHtmlToMarkdown } from "./utils/builtin-html-to-markdown";
+import {
+  builtinHtmlToMarkdown,
+  detectContentType,
+} from "./utils/builtin-html-to-markdown";
 import { headingOptions, isDropdownButton } from "./toolbar-config";
 import { createI18n } from "./i18n";
 
@@ -76,7 +79,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
       // Initialize content on first render
       if (!initialized) {
-        if (content.includes("<")) {
+        if (detectContentType(content) === "html") {
           // Content is HTML
           wysiwygContent = content;
           markdownContent = htmlToMarkdown

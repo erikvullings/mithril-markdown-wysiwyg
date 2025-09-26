@@ -567,3 +567,29 @@ const builtinConverter = new BuiltinHtmlToMarkdown();
 export const builtinHtmlToMarkdown = (html: string | HTMLElement): string => {
   return builtinConverter.htmlToMarkdown(html);
 };
+
+export const detectContentType = (
+  text: string,
+): "html" | "markdown" | "plain" => {
+  const trimmed = text.trim();
+
+  // Try parsing as HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(trimmed, "text/html");
+
+  const hasTags =
+    doc.body.children.length > 0 || doc.body.querySelector("*") !== null;
+
+  if (hasTags) {
+    return "html";
+  }
+
+  // Markdown patterns
+  const markdownRegex =
+    /(^#{1,6}\s)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[[^\]]+\]\([^)]+\))|(^\s*[-*+]\s+)/m;
+  if (markdownRegex.test(trimmed)) {
+    return "markdown";
+  }
+
+  return "plain";
+};
