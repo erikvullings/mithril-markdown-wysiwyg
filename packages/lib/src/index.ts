@@ -1,10 +1,10 @@
 import { MarkdownEditor } from "./editor";
-import { MarkdownEditorAttrs } from "./types";
 import "./styles.css";
 
 // Export main components
 export { MarkdownEditor };
-export type { MarkdownEditorAttrs };
+export * from "./types";
+export * from "./i18n";
 
 // Export utilities for advanced usage
 export {

@@ -15,6 +15,8 @@ export interface I18nStrings {
   undo: string;
   redo: string;
   heading: string;
+  indent: string;
+  outdent: string;
 
   // Table menu
   insertRowAbove: string;
@@ -69,6 +71,8 @@ export const defaultStrings: I18nStrings = {
   undo: "Undo",
   redo: "Redo",
   heading: "Heading",
+  indent: "Increase Indent",
+  outdent: "Decrease Indent",
 
   // Table menu
   insertRowAbove: "Insert Row Above",

@@ -3,13 +3,13 @@ import type { I18nStrings } from "./i18n";
 
 // SVG Icons from the original implementation
 const ICON_HEADING_MENU = `<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M6 4V20 M18 4V20 M6 12H18"/></svg>`;
-const ICON_H1 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="8" font-size="4" fill="currentColor">1</text></svg>`;
-const ICON_H2 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="8" font-size="4" fill="currentColor">2</text></svg>`;
-const ICON_H3 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="8" font-size="4" fill="currentColor">3</text></svg>`;
-const ICON_H4 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="8" font-size="4" fill="currentColor">4</text></svg>`;
-const ICON_H5 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="8" font-size="4" fill="currentColor">5</text></svg>`;
-const ICON_H6 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="8" font-size="4" fill="currentColor">6</text></svg>`;
-const ICON_PARAGRAPH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6V2H8c-1 0-2 1-2 2v8c0 1 1 2 2 2h4V8h8m-8 8v6"/></svg>`;
+const ICON_H1 = `<svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="10" font-size="10" stroke-width="1" fill="currentColor">1</text></svg>`;
+const ICON_H2 = `<svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="10" font-size="10" stroke-width="1" fill="currentColor">2</text></svg>`;
+const ICON_H3 = `<svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="10" font-size="10" stroke-width="1" fill="currentColor">3</text></svg>`;
+const ICON_H4 = `<svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="10" font-size="10" stroke-width="1" fill="currentColor">4</text></svg>`;
+const ICON_H5 = `<svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="10" font-size="10" stroke-width="1" fill="currentColor">5</text></svg>`;
+const ICON_H6 = `<svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4V20 M18 4V20 M6 12H18"/><text x="20" y="10" font-size="10" stroke-width="1" fill="currentColor">6</text></svg>`;
+const ICON_PARAGRAPH = `<svg viewBox="0 0 100 100" stroke="currentColor" stroke-width="2"><path d="M74 21H44c-10 0-17 8-17 18s7 17 17 17h5v23h6V27h8v52h6V27h5z"/></svg>`;
 
 const ICON_BOLD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>`;
 const ICON_ITALIC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>`;
@@ -100,7 +100,7 @@ export const toolbarButtonGroups = [
   [
     {
       name: "heading-dropdown",
-      icon: ICON_HEADING_MENU + ICON_DROPDOWN,
+      icon: ICON_HEADING_MENU,
       title: "Heading",
       action: "toggleHeading",
       dropdown: headingOptions,
@@ -390,7 +390,7 @@ export const createI18nToolbarConfig = (
     [
       {
         name: "heading-dropdown",
-        icon: ICON_HEADING_MENU + ICON_DROPDOWN,
+        icon: ICON_HEADING_MENU,
         title: t("heading"),
         action: "toggleHeading",
         dropdown: i18nHeadingOptions,
@@ -471,14 +471,14 @@ export const createI18nToolbarConfig = (
       {
         name: "outdent",
         icon: ICON_OUTDENT,
-        title: "Decrease Indent",
+        title: t("outdent"),
         action: "outdent",
         shortcut: "Shift+Tab",
       },
       {
         name: "indent",
         icon: ICON_INDENT,
-        title: "Increase Indent",
+        title: t("indent"),
         action: "indent",
         shortcut: "Tab",
       },

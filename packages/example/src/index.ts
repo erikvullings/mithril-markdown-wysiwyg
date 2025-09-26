@@ -2,6 +2,7 @@ import m from "mithril";
 import { MarkdownEditor, MarkdownEditorAttrs } from "mithril-markdown-wysiwyg";
 import "mithril-markdown-wysiwyg/dist/index.css";
 import { markedRenderer, slimdownRenderer } from "./markdown-utils";
+import { dutchStrings } from "./dutch-i18n";
 
 const initialContent = `# Welcome to the Mithril Markdown Editor
 
@@ -75,6 +76,13 @@ interface AppState {
     isPreview: boolean;
     renderer: "marked" | "slimdown";
   };
+  editor3: {
+    mode: "wysiwyg" | "markdown";
+    content: string;
+    theme: "light" | "dark";
+    isPreview: boolean;
+    renderer: "marked" | "slimdown";
+  };
 }
 
 const App = () => {
@@ -94,6 +102,14 @@ const App = () => {
       isPreview: false,
       renderer: "slimdown",
     },
+    editor3: {
+      mode: "wysiwyg",
+      content:
+        "# Nederlandse Editor\n\nDeze editor gebruikt **Nederlandse** vertalingen voor alle interface-elementen.\n\n## Functies\n\n- Volledig **vertaalde** interface\n- Ondersteunt alle standaard markdown **opmaak**\n- *Cursieve* en **vette** tekst\n- [Links](https://mithril.js.org) en afbeeldingen\n\n> Dit is een citaat in het Nederlands.\n\nProbeer de verschillende knoppen in de werkbalk!",
+      theme: "light",
+      isPreview: false,
+      renderer: "marked",
+    },
   };
 
   const updateEditor1 = (updates: Partial<typeof state.editor1>) => {
@@ -106,10 +122,16 @@ const App = () => {
     m.redraw();
   };
 
+  const updateEditor3 = (updates: Partial<typeof state.editor3>) => {
+    state.editor3 = { ...state.editor3, ...updates };
+    m.redraw();
+  };
+
   const toggleTheme = () => {
     const newTheme = state.editor1.theme === "light" ? "dark" : "light";
     updateEditor1({ theme: newTheme });
     updateEditor2({ theme: newTheme });
+    updateEditor3({ theme: newTheme });
     document.body.className = newTheme === "dark" ? "dark-theme" : "";
   };
 
@@ -195,6 +217,30 @@ const App = () => {
         ]),
 
         m("div.demo-section", [
+          m("h2", "Nederlandse Editor (Dutch i18n Example)"),
+          m(
+            "p",
+            "This editor demonstrates internationalization with Dutch translations for all UI elements.",
+          ),
+          m(MarkdownEditor, {
+            mode: state.editor3.mode,
+            content: state.editor3.content,
+            theme: state.editor3.theme,
+            isPreview: state.editor3.isPreview,
+            toolbar: true,
+            placeholder: "Begin met typen...",
+            i18n: dutchStrings,
+            ...getRenderer(state.editor3.renderer),
+            onContentChange: (content: string) => {
+              updateEditor3({ content });
+            },
+            onModeChange: (mode: "wysiwyg" | "markdown") => {
+              updateEditor3({ mode });
+            },
+          } as MarkdownEditorAttrs),
+        ]),
+
+        m("div.demo-section", [
           m("h2", "Usage Examples"),
           m("div", [
             m("h3", "Basic Setup"),
@@ -249,6 +295,30 @@ const App = () => {
               ),
             ),
 
+            m("h3", "With Internationalization (i18n)"),
+            m(
+              "pre",
+              m(
+                "code",
+                `import { dutchStrings } from "./dutch-i18n";
+
+const App = () => {
+  let content = "";
+
+  return {
+    view: () =>
+      m(MarkdownEditor, {
+        content,
+        onContentChange: (newContent) => content = newContent,
+        placeholder: "Begin met typen...",
+        i18n: dutchStrings, // Dutch translations
+        theme: "light"
+      })
+  };
+};`,
+              ),
+            ),
+
             m("h3", "Configuration Options"),
             m(
               "pre",
@@ -265,7 +335,8 @@ const App = () => {
   markdownToHtml?: (md: string) => string;  // Optional renderer
   htmlToMarkdown?: (html: string) => string; // Optional converter
   onContentChange?: (content: string) => void;
-  onModeChange?: (mode: string) => void;
+  onModeChange?: (mode: string) => void;    // Optional - auto-managed if not provided
+  i18n?: Partial<I18nStrings>;             // Optional translations
 }`,
               ),
             ),

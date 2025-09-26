@@ -1,6 +1,11 @@
 import m, { type FactoryComponent } from "mithril";
 import { MarkdownEditorAttrs, ToolbarButton } from "./types";
-import { toolbarButtonGroups, createI18nToolbarConfig } from "./toolbar-config";
+import {
+  toolbarButtonGroups,
+  createI18nToolbarConfig,
+  headingOptions,
+  isDropdownButton,
+} from "./toolbar-config";
 import { EditorActions } from "./editor-actions";
 import { ImageModal } from "./components/image-modal";
 import { LinkModal } from "./components/link-modal";
@@ -11,7 +16,6 @@ import {
   builtinHtmlToMarkdown,
   detectContentType,
 } from "./utils/builtin-html-to-markdown";
-import { headingOptions, isDropdownButton } from "./toolbar-config";
 import { createI18n } from "./i18n";
 
 // Global cursor position storage to persist across re-renders
@@ -32,6 +36,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let markdownContent = "";
   let initialized = false;
   let editorActions: EditorActions | null = null;
+  let internalMode: "wysiwyg" | "markdown" | null = null;
 
   // Helper function to safely render markdown with empty content check
   const safeMarkdownToHtml = (
@@ -56,6 +61,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let dropdownOptions: ToolbarButton[] = [];
   let dropdownPosition = { x: 0, y: 0 };
   let dropdownTriggerElement: HTMLElement | null = null;
+  let activeDropdownButton: string | null = null;
 
   // Table context menu state
   let tableContextTarget: HTMLElement | null = null;
@@ -75,10 +81,16 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         htmlToMarkdown,
         onContentChange,
         onModeChange,
+        i18n,
       } = attrs;
 
-      // Initialize content on first render
+      // Initialize mode and content on first render
       if (!initialized) {
+        // Set initial internal mode if onModeChange is not provided
+        if (!onModeChange) {
+          internalMode = mode;
+        }
+
         if (detectContentType(content) === "html") {
           // Content is HTML
           wysiwygContent = content;
@@ -92,6 +104,14 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         }
         initialized = true;
       }
+
+      // Determine the current mode - use internal mode if onModeChange is not provided
+      const currentMode = onModeChange ? mode : internalMode || mode;
+
+      // Create i18n function and toolbar configuration
+      const t = createI18n(i18n);
+      const toolbarConfig = createI18nToolbarConfig(t);
+      const currentToolbarGroups = toolbarConfig.groups;
 
       const handleContentChange = (
         newContent: string,
@@ -112,25 +132,30 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
       if (!editorActions) {
         editorActions = new EditorActions((newContent: string) => {
-          handleContentChange(newContent, mode);
+          handleContentChange(newContent, currentMode);
         });
       }
-      editorActions.setMode(mode);
+      editorActions.setMode(currentMode);
 
       const handleModeChange = (newMode: "wysiwyg" | "markdown") => {
-        if (newMode !== mode) {
+        if (newMode !== currentMode) {
           // Convert content when switching modes
-          if (newMode === "markdown" && mode === "wysiwyg") {
+          if (newMode === "markdown" && currentMode === "wysiwyg") {
             // Switching from WYSIWYG to markdown - convert HTML to markdown
             markdownContent = htmlToMarkdown
               ? htmlToMarkdown(wysiwygContent)
               : builtinHtmlToMarkdown(wysiwygContent);
-          } else if (newMode === "wysiwyg" && mode === "markdown") {
+          } else if (newMode === "wysiwyg" && currentMode === "markdown") {
             // Switching from markdown to WYSIWYG - convert markdown to HTML
             wysiwygContent = safeMarkdownToHtml(
               markdownContent,
               markdownToHtml,
             );
+          }
+
+          // Update internal mode if no external mode management
+          if (!onModeChange) {
+            internalMode = newMode;
           }
 
           editorActions?.setMode(newMode);
@@ -177,7 +202,8 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         // Save scroll position for both modes
         const contentEditable = (editorActions as any)?.contentEditable;
         const textarea = editorActions?.getTextarea();
-        const scrollElement = mode === "wysiwyg" ? contentEditable : textarea;
+        const scrollElement =
+          currentMode === "wysiwyg" ? contentEditable : textarea;
 
         if (scrollElement) {
           cursorPositionStorage.savedScrollPosition = {
@@ -185,17 +211,17 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             left: scrollElement.scrollLeft,
           };
           console.log("🔄 Saved scroll position:", {
-            mode,
+            mode: currentMode,
             scrollTop: scrollElement.scrollTop,
             scrollLeft: scrollElement.scrollLeft,
             elementType: scrollElement.tagName,
           });
         } else {
-          console.log("❌ No scroll element found for mode:", mode);
+          console.log("❌ No scroll element found for mode:", currentMode);
         }
 
         if (
-          mode === "markdown" &&
+          currentMode === "markdown" &&
           document.activeElement instanceof HTMLTextAreaElement
         ) {
           const textarea = document.activeElement;
@@ -203,7 +229,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             start: textarea.selectionStart,
             end: textarea.selectionEnd,
           };
-        } else if (mode === "wysiwyg") {
+        } else if (currentMode === "wysiwyg") {
           const selection = document.getSelection();
 
           if (selection && selection.rangeCount > 0) {
@@ -226,7 +252,10 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
       // Function to restore cursor position
       const restoreCursorPosition = (): Promise<void> => {
         return new Promise((resolve) => {
-          if (mode === "markdown" && cursorPositionStorage.savedSelection) {
+          if (
+            currentMode === "markdown" &&
+            cursorPositionStorage.savedSelection
+          ) {
             const textarea = editorActions?.getTextarea();
             if (textarea) {
               setTimeout(() => {
@@ -240,7 +269,10 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             } else {
               resolve(); // No saved selection to restore
             }
-          } else if (mode === "wysiwyg" && cursorPositionStorage.savedRange) {
+          } else if (
+            currentMode === "wysiwyg" &&
+            cursorPositionStorage.savedRange
+          ) {
             // Use a longer timeout and ensure the contentEditable is focused first
             setTimeout(() => {
               if (editorActions) {
@@ -353,7 +385,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
           // Only clean up immediately for non-WYSIWYG modes
           // For WYSIWYG, cleanup happens after the async restore completes
-          if (mode !== "wysiwyg" || !cursorPositionStorage.savedRange) {
+          if (currentMode !== "wysiwyg" || !cursorPositionStorage.savedRange) {
             // Restore scroll position for markdown mode
             if (cursorPositionStorage.savedScrollPosition) {
               const textarea = editorActions?.getTextarea();
@@ -519,9 +551,12 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             const target = event?.target as HTMLElement;
             if (target) {
               const rect = target.getBoundingClientRect();
-              dropdownOptions = headingOptions;
+              // Use i18n heading options from the toolbar config
+              const headingButton = currentToolbarGroups[0][0]; // First button in first group
+              dropdownOptions = headingButton.dropdown || headingOptions;
               dropdownPosition = { x: rect.left, y: rect.bottom + 4 };
               dropdownTriggerElement = target;
+              activeDropdownButton = button.name;
               showDropdown = true;
               m.redraw();
               return;
@@ -553,6 +588,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
       // Handle dropdown selection
       const handleDropdownSelect = async (option: ToolbarButton) => {
         showDropdown = false;
+        activeDropdownButton = null;
 
         if (editorActions) {
           // Restore cursor position before executing action
@@ -570,7 +606,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         [
           toolbar &&
             m(".md-toolbar", [
-              toolbarButtonGroups
+              currentToolbarGroups
                 .map((group, groupIndex) => [
                   ...group.map((button) => {
                     // Check if button should be disabled
@@ -586,6 +622,11 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                       class: [
                         "md-toolbar-button",
                         isDropdownButton(button) ? "has-dropdown" : "",
+                        isDropdownButton(button) &&
+                        showDropdown &&
+                        activeDropdownButton === button.name
+                          ? "dropdown-open"
+                          : "",
                         isDisabled ? "disabled" : "",
                       ]
                         .join(" ")
@@ -604,14 +645,14 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     });
                   }),
                   // Add separator after each group except the last one
-                  groupIndex < toolbarButtonGroups.length - 1 &&
+                  groupIndex < currentToolbarGroups.length - 1 &&
                     m(".md-toolbar-separator"),
                 ])
                 .flat()
                 .filter(Boolean),
             ]),
           m(".md-editor-content-area", [
-            mode === "markdown"
+            currentMode === "markdown"
               ? m(
                   ".md-markdown-editor-container",
                   {
@@ -644,7 +685,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     // Check if we're right-clicking on a table
                     const target = e.target as HTMLElement;
                     const table = target.closest("table");
-                    if (table && mode === "wysiwyg") {
+                    if (table && currentMode === "wysiwyg") {
                       e.preventDefault();
                       e.stopPropagation();
 
@@ -668,6 +709,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
                       // Close any existing dropdown first
                       showDropdown = false;
+                      activeDropdownButton = null;
 
                       // Show table menu
                       showTableMenu = true;
@@ -690,6 +732,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
                     if (showDropdown) {
                       showDropdown = false;
+                      activeDropdownButton = null;
                       needsRedraw = true;
                     }
 
@@ -721,25 +764,25 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                 "button.md-tab-button",
                 {
                   type: "button",
-                  class: mode === "wysiwyg" ? "active" : "",
+                  class: currentMode === "wysiwyg" ? "active" : "",
                   onclick: () => handleModeChange("wysiwyg"),
                 },
-                "Visual",
+                t("wysiwyg"),
               ),
               m(
                 "button.md-tab-button",
                 {
                   type: "button",
-                  class: mode === "markdown" ? "active" : "",
+                  class: currentMode === "markdown" ? "active" : "",
                   onclick: () => handleModeChange("markdown"),
                 },
-                "Markdown",
+                t("markdown"),
               ),
             ]),
           isPreview &&
             m(".editor-preview", {
               innerHTML:
-                mode === "markdown"
+                currentMode === "markdown"
                   ? safeMarkdownToHtml(markdownContent, markdownToHtml)
                   : wysiwygContent,
             }),
@@ -775,6 +818,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
           m(TableMenu, {
             isVisible: showTableMenu,
             position: tableMenuPosition,
+            t,
             onClose: () => {
               showTableMenu = false;
               tableContextTarget = null;
@@ -839,6 +883,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             triggerElement: dropdownTriggerElement,
             onClose: () => {
               showDropdown = false;
+              activeDropdownButton = null;
               m.redraw();
             },
             onSelect: handleDropdownSelect,

@@ -1,4 +1,5 @@
 import m, { Component, Vnode } from "mithril";
+import type { I18nStrings } from "../i18n";
 
 const ICON_TABLE_INSERT_ROW_ABOVE = `<svg viewBox="0 0 24 24" fill="none"><g fill="#4a90e2"><rect x="3" y="10" width="5" height="3" rx=".5"/><rect x="9" y="10" width="5" height="3" rx=".5"/><rect x="15" y="10" width="5" height="3" rx=".5"/></g><g fill="#999"><rect x="3" y="15" width="5" height="3" rx=".5"/><rect x="9" y="15" width="5" height="3" rx=".5"/><rect x="15" y="15" width="5" height="3" rx=".5"/></g><path stroke="#4a90e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 8V4M10 5l2-2 2 2"/></svg>`;
 const ICON_TABLE_INSERT_ROW_BELOW = `<svg viewBox="0 0 24 24" fill="none"><g fill="#999"><rect x="3" y="6" width="5" height="3" rx=".5"/><rect x="9" y="6" width="5" height="3" rx=".5"/><rect x="15" y="6" width="5" height="3" rx=".5"/></g><g fill="#4a90e2"><rect x="3" y="11" width="5" height="3" rx=".5"/><rect x="9" y="11" width="5" height="3" rx=".5"/><rect x="15" y="11" width="5" height="3" rx=".5"/></g><path stroke="#4a90e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 16v4M10 19l2 2 2-2"/></svg>`;
@@ -8,6 +9,7 @@ const ICON_TABLE_INSERT_COL_RIGHT = `<svg viewBox="0 0 24 24" fill="none"><g fil
 export interface TableMenuAttrs {
   isVisible: boolean;
   position: { x: number; y: number };
+  t: (key: keyof I18nStrings) => string;
   onClose: () => void;
   onInsertRowAbove: () => void;
   onInsertRowBelow: () => void;
@@ -28,42 +30,42 @@ export const TableMenu: Component<TableMenuAttrs, TableMenuState> = {
 
     const menuItems = [
       {
-        label: "Insert Row Above",
+        label: attrs.t("insertRowAbove"),
         action: attrs.onInsertRowAbove,
         icon: ICON_TABLE_INSERT_ROW_ABOVE,
       },
       {
-        label: "Insert Row Below",
+        label: attrs.t("insertRowBelow"),
         action: attrs.onInsertRowBelow,
         icon: ICON_TABLE_INSERT_ROW_BELOW,
       },
       { type: "separator" },
       {
-        label: "Insert Column Left",
+        label: attrs.t("insertColumnLeft"),
         action: attrs.onInsertColumnLeft,
         icon: ICON_TABLE_INSERT_COL_LEFT,
       },
       {
-        label: "Insert Column Right",
+        label: attrs.t("insertColumnRight"),
         action: attrs.onInsertColumnRight,
         icon: ICON_TABLE_INSERT_COL_RIGHT,
       },
       { type: "separator" },
       {
-        label: "Delete Row",
+        label: attrs.t("deleteRow"),
         action: attrs.onDeleteRow,
         icon: "✕",
         danger: true,
       },
       {
-        label: "Delete Column",
+        label: attrs.t("deleteColumn"),
         action: attrs.onDeleteColumn,
         icon: "✕",
         danger: true,
       },
       { type: "separator" },
       {
-        label: "Delete Table",
+        label: attrs.t("deleteTable"),
         action: attrs.onDeleteTable,
         icon: "🗑",
         danger: true,
