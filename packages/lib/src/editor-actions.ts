@@ -103,7 +103,48 @@ export class EditorActions {
       }
     };
 
+    const handlePaste = (event: Event) => {
+      const clipboardEvent = event as ClipboardEvent;
+
+      // Only process paste for markdown mode
+      if (this.mode === "markdown" && element instanceof HTMLTextAreaElement) {
+        const pastedText = clipboardEvent.clipboardData?.getData('text/plain');
+
+        if (pastedText) {
+          // Clean up common markdown issues from clipboard
+          let cleanedText = pastedText
+            // Fix literal \n to actual newlines
+            .replace(/\\n/g, '\n')
+            // Fix literal \t to actual tabs
+            .replace(/\\t/g, '\t')
+            // Fix literal \r to carriage returns
+            .replace(/\\r/g, '\r');
+
+          // If the cleaned text is different, prevent default and insert cleaned version
+          if (cleanedText !== pastedText) {
+            clipboardEvent.preventDefault();
+
+            const textarea = element;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const currentValue = textarea.value;
+
+            // Insert cleaned text at cursor position
+            textarea.value = currentValue.substring(0, start) + cleanedText + currentValue.substring(end);
+
+            // Set cursor position after inserted text
+            const newCursorPos = start + cleanedText.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+
+            // Notify content change
+            this.onContentChange?.(textarea.value);
+          }
+        }
+      }
+    };
+
     element.addEventListener("keydown", handleKeyDown);
+    element.addEventListener("paste", handlePaste);
   }
 
   // Action execution dispatcher
@@ -489,6 +530,9 @@ export class EditorActions {
           this.contentEditable as ContentEditableElement,
         ),
       );
+    } else if (this.mode === "markdown" && this.textarea) {
+      // For markdown mode, select all text in textarea
+      this.textarea.select();
     }
   }
 
