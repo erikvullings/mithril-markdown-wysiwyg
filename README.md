@@ -9,7 +9,7 @@ A powerful WYSIWYG markdown editor built with Mithril.js, featuring dual-mode ed
 - 🛠️ **Rich Toolbar**: Full formatting options including bold, italic, headers, lists, links, images, and tables
 - 📱 **Responsive**: Works great on desktop and mobile devices
 - 🎯 **TypeScript**: Full TypeScript support with proper type definitions
-- 🔧 **Pluggable Renderers**: Use any markdown renderer (marked.js, slimdown-js, etc.)
+- 🔧 **Pluggable Renderers**: Use any markdown renderer (marked.js, `slimdown-js`, etc.)
 - ⚡ **Zero Dependencies**: Core library has no runtime dependencies
 - 🎛️ **Configurable**: Hide tabs, toolbar, or customize themes
 - 🌍 **Empty Content Handling**: Built-in empty content checks
@@ -27,6 +27,8 @@ pnpm add mithril-markdown-wysiwyg
 # or
 yarn add mithril-markdown-wysiwyg
 ```
+
+Publish, after updating the version number in `lib/package.json`, using `cd packages/lib && npm publish`
 
 ## Quick Start
 
@@ -170,7 +172,7 @@ const App = () => {
 
 ## API Reference
 
-### MarkdownEditorAttrs Interface
+### `MarkdownEditorAttrs` Interface
 
 ```typescript
 interface MarkdownEditorAttrs {
@@ -253,7 +255,7 @@ The editor supports all standard markdown formatting:
 - **Links and images**: With modal dialogs for easy insertion
 - **Code**: Inline code and code blocks
 - **Tables**: Full table editing with context menu
-- **Block elements**: Blockquotes, horizontal rules
+- **Block elements**: Block-quotes, horizontal rules
 - **Advanced**: Copy/paste, undo/redo, drag & drop
 
 ## Browser Support
@@ -301,4 +303,4 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 - Built with [Mithril.js](https://mithril.js.org/)
-- Markdown rendering examples use [Marked](https://marked.js.org/) and [Slimdown.js](https://github.com/ianforth/slimdown-js)
+- Markdown rendering examples use [Marked](https://marked.js.org/) and [`Slimdown.js`](https://github.com/ianforth/slimdown-js)
