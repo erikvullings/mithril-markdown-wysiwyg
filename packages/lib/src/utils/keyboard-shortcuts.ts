@@ -320,7 +320,7 @@ export const handleTabKey = (
           const newValue =
             value.slice(0, lineStart) +
             newLine +
-            value.slice(lineEnd === -1 ? undefined : lineEnd);
+            value.slice(lineEnd === -1 ? value.length : lineEnd);
 
           element.value = newValue;
           element.setSelectionRange(
@@ -335,7 +335,7 @@ export const handleTabKey = (
         const newValue =
           value.slice(0, lineStart) +
           newLine +
-          value.slice(lineEnd === -1 ? undefined : lineEnd);
+          value.slice(lineEnd === -1 ? value.length : lineEnd);
 
         element.value = newValue;
         element.setSelectionRange(selectionStart + 2, selectionStart + 2);
@@ -363,11 +363,44 @@ export const handleEnterKey = (
     lineEnd === -1 ? undefined : lineEnd,
   );
 
-  // Check for list patterns
+  // Check for list patterns (task list items must be checked before plain
+  // unordered ones, since "- [ ] task" also matches the plain marker regex)
+  const taskMatch = currentLine.match(/^(\s*)([-*+])\s\[[ xX]\]\s(.*)$/);
   const unorderedMatch = currentLine.match(/^(\s*)([-*+])\s(.*)$/);
   const orderedMatch = currentLine.match(/^(\s*)(\d+)\.\s(.*)$/);
 
-  if (unorderedMatch) {
+  if (taskMatch) {
+    const [, indent, marker, content] = taskMatch;
+
+    if (content.trim() === "") {
+      // Empty task item - remove it and outdent
+      event.preventDefault();
+      const newValue =
+        value.slice(0, lineStart) +
+        indent +
+        value.slice(lineEnd === -1 ? value.length : lineEnd);
+      element.value = newValue;
+      element.setSelectionRange(
+        lineStart + indent.length,
+        lineStart + indent.length,
+      );
+      return true;
+    } else {
+      // Continue with a fresh, unchecked checkbox
+      event.preventDefault();
+      const newListItem = `\n${indent}${marker} [ ] `;
+      const insertPos = lineEnd === -1 ? value.length : lineEnd;
+      const newValue =
+        value.slice(0, insertPos) + newListItem + value.slice(insertPos);
+
+      element.value = newValue;
+      element.setSelectionRange(
+        insertPos + newListItem.length,
+        insertPos + newListItem.length,
+      );
+      return true;
+    }
+  } else if (unorderedMatch) {
     const [, indent, marker, content] = unorderedMatch;
 
     if (content.trim() === "") {
@@ -376,7 +409,7 @@ export const handleEnterKey = (
       const newValue =
         value.slice(0, lineStart) +
         indent +
-        value.slice(lineEnd === -1 ? undefined : lineEnd);
+        value.slice(lineEnd === -1 ? value.length : lineEnd);
       element.value = newValue;
       element.setSelectionRange(
         lineStart + indent.length,
@@ -407,7 +440,7 @@ export const handleEnterKey = (
       const newValue =
         value.slice(0, lineStart) +
         indent +
-        value.slice(lineEnd === -1 ? undefined : lineEnd);
+        value.slice(lineEnd === -1 ? value.length : lineEnd);
       element.value = newValue;
       element.setSelectionRange(
         lineStart + indent.length,

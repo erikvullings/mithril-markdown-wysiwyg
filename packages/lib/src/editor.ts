@@ -117,6 +117,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
           markdownContent = htmlToMarkdown
             ? htmlToMarkdown(newContent)
             : builtinHtmlToMarkdown(newContent);
+          editorActions?.recordHistory(newContent);
           onContentChange?.(markdownContent);
         } else {
           markdownContent = newContent;
@@ -126,9 +127,18 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
       };
 
       if (!editorActions) {
+        // This callback is created once, on the first render, but content
+        // changes can arrive from any later render/mode. Look up the mode
+        // via editorActions.getMode() at call time rather than closing over
+        // `currentMode` - that would freeze it at whatever mode was active
+        // on this very first render, silently misclassifying every content
+        // change made after the user switches modes (e.g. a markdown-mode
+        // edit getting treated as WYSIWYG HTML, corrupting the textarea's
+        // value and resetting the cursor to the end).
         editorActions = new EditorActions((newContent: string) => {
-          handleContentChange(newContent, currentMode);
+          handleContentChange(newContent, editorActions!.getMode());
         });
+        editorActions.initHistory(wysiwygContent);
       }
       editorActions.setMode(currentMode);
 
@@ -146,6 +156,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
               markdownContent,
               markdownToHtml,
             );
+            // The WYSIWYG content is freshly regenerated from markdown, so
+            // undo history from before the mode switch no longer applies.
+            editorActions?.initHistory(wysiwygContent);
           }
 
           // Update internal mode if no external mode management
@@ -393,6 +406,21 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                       const target = e.target as HTMLTextAreaElement;
                       handleContentChange(target.value, "markdown");
                     },
+                    onkeydown: (e: Event) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      editorActions?.handleKeyDown(e);
+                      // Force the view to catch up with the DOM mutation
+                      // handleKeyDown may have just made (e.g. continuing a
+                      // list on Enter) within this same tick, rather than
+                      // waiting for Mithril's usual rAF-deferred redraw.
+                      // Without this, a later redraw can momentarily diff
+                      // against stale state and disturb focus/selection,
+                      // leaving the textarea looking like it needs a click
+                      // before typing continues.
+                      m.redraw.sync();
+                      target.focus();
+                    },
+                    onpaste: (e: Event) => editorActions?.handlePaste(e),
                     oncreate: (vnode: m.VnodeDOM) => {
                       editorActions?.setTextarea(
                         vnode.dom as HTMLTextAreaElement,
@@ -408,6 +436,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     const target = e.target as HTMLElement;
                     handleContentChange(target.innerHTML, "wysiwyg");
                   },
+                  onkeydown: (e: Event) => editorActions?.handleKeyDown(e),
                   oncontextmenu: (e: MouseEvent) => {
                     // Check if we're right-clicking on a table
                     const target = e.target as HTMLElement;

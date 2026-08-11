@@ -13,6 +13,7 @@ import {
 import { ContentEditableElement } from "./utils/dom-commands";
 import * as MarkdownUtils from "./utils/markdown-formatting";
 import * as DOMUtils from "./utils/dom-commands";
+import { createContentHistory, ContentHistory } from "./utils/content-history";
 import {
   handleKeyboardShortcut,
   getPlatformShortcuts,
@@ -33,6 +34,8 @@ export class EditorActions {
   private contentEditable: HTMLElement | null = null;
   private onContentChange?: (content: string) => void;
   private onToggleMode?: () => void;
+  private history: ContentHistory = createContentHistory("");
+  private isRestoringHistory = false;
 
   constructor(onContentChange?: (content: string) => void) {
     this.onContentChange = onContentChange;
@@ -50,7 +53,6 @@ export class EditorActions {
 
   setTextarea(element: HTMLTextAreaElement): void {
     this.textarea = element;
-    this.setupKeyboardHandlers(element);
   }
 
   getTextarea(): HTMLTextAreaElement | null {
@@ -59,15 +61,34 @@ export class EditorActions {
 
   setContentEditable(element: HTMLElement): void {
     this.contentEditable = element;
-    this.setupKeyboardHandlers(element);
   }
 
   getContentEditable(): HTMLElement | null {
     return this.contentEditable;
   }
 
+  /** Establish the undo/redo baseline. Call once with the loaded WYSIWYG content. */
+  initHistory(content: string): void {
+    this.history.reset(content);
+  }
+
+  /**
+   * Record a WYSIWYG content change (from typing or a toolbar action) for
+   * undo/redo. Calls made while `undo`/`redo` are themselves restoring a
+   * snapshot are ignored, so re-feeding that content through the normal
+   * change pipeline doesn't corrupt the history stacks.
+   */
+  recordHistory(content: string): void {
+    if (this.isRestoringHistory) return;
+    this.history.record(content);
+  }
+
   setMode(mode: "wysiwyg" | "markdown"): void {
     this.mode = mode;
+  }
+
+  getMode(): "wysiwyg" | "markdown" {
+    return this.mode;
   }
 
   // Private helper methods
@@ -80,81 +101,106 @@ export class EditorActions {
     }
   }
 
-  private setupKeyboardHandlers(element: HTMLElement): void {
-    const handleKeyDown = (event: Event) => {
-      const keyboardEvent = event as unknown as KeyboardEvent;
+  /**
+   * Handle a keydown event from either the markdown textarea or the WYSIWYG
+   * contentEditable element. Wire this through the element's `onkeydown`
+   * vnode attribute (not a raw `addEventListener`) so Mithril's own
+   * autoredraw scheduling covers content changes made here too - otherwise a
+   * consumer whose `onContentChange` doesn't itself call `m.redraw()` (or
+   * relies on some other redraw trigger, e.g. a state-stream subscription)
+   * would never see the resulting DOM/state changes reflected.
+   */
+  handleKeyDown(event: Event): void {
+    const keyboardEvent = event as unknown as KeyboardEvent;
 
-      // Handle platform-specific shortcuts
-      const handled = handleKeyboardShortcut(
-        keyboardEvent,
-        (action: string) => this.executeAction(action),
-        getPlatformShortcuts(),
+    // Handle platform-specific shortcuts
+    const handled = handleKeyboardShortcut(
+      keyboardEvent,
+      (action: string) => this.executeAction(action),
+      getPlatformShortcuts(),
+    );
+
+    if (handled) return;
+
+    const isPlainEnter =
+      keyboardEvent.key === "Enter" &&
+      !keyboardEvent.shiftKey &&
+      !keyboardEvent.ctrlKey &&
+      !keyboardEvent.metaKey &&
+      !keyboardEvent.altKey;
+
+    // Continue a WYSIWYG task list item with a fresh checkbox on Enter. The
+    // browser's native list-splitting doesn't carry the checkbox over, so
+    // without this it silently degrades into a plain list item.
+    if (isPlainEnter && this.mode === "wysiwyg" && this.contentEditable) {
+      const newContent = DOMUtils.continueTaskListItem(
+        this.contentEditable as ContentEditableElement,
       );
-
-      if (handled) return;
-
-      // Handle special keys for markdown mode
-      if (this.mode === "markdown" && element instanceof HTMLTextAreaElement) {
-        // Tab key handling
-        if (keyboardEvent.key === "Tab") {
-          if (handleTabKey(keyboardEvent, element, keyboardEvent.shiftKey)) {
-            this.onContentChange?.(element.value);
-          }
-          return;
-        }
-
-        // Enter key handling for smart lists
-        if (keyboardEvent.key === "Enter") {
-          if (handleEnterKey(keyboardEvent, element)) {
-            this.onContentChange?.(element.value);
-          }
-          return;
-        }
+      if (newContent !== null) {
+        keyboardEvent.preventDefault();
+        this.onContentChange?.(newContent);
+        return;
       }
-    };
+    }
 
-    const handlePaste = (event: Event) => {
-      const clipboardEvent = event as ClipboardEvent;
+    // Handle special keys for markdown mode
+    if (this.mode === "markdown" && this.textarea) {
+      const textarea = this.textarea;
 
-      // Only process paste for markdown mode
-      if (this.mode === "markdown" && element instanceof HTMLTextAreaElement) {
-        const pastedText = clipboardEvent.clipboardData?.getData('text/plain');
-
-        if (pastedText) {
-          // Clean up common markdown issues from clipboard
-          let cleanedText = pastedText
-            // Fix literal \n to actual newlines
-            .replace(/\\n/g, '\n')
-            // Fix literal \t to actual tabs
-            .replace(/\\t/g, '\t')
-            // Fix literal \r to carriage returns
-            .replace(/\\r/g, '\r');
-
-          // If the cleaned text is different, prevent default and insert cleaned version
-          if (cleanedText !== pastedText) {
-            clipboardEvent.preventDefault();
-
-            const textarea = element;
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const currentValue = textarea.value;
-
-            // Insert cleaned text at cursor position
-            textarea.value = currentValue.substring(0, start) + cleanedText + currentValue.substring(end);
-
-            // Set cursor position after inserted text
-            const newCursorPos = start + cleanedText.length;
-            textarea.setSelectionRange(newCursorPos, newCursorPos);
-
-            // Notify content change
-            this.onContentChange?.(textarea.value);
-          }
+      // Tab key handling
+      if (keyboardEvent.key === "Tab") {
+        if (handleTabKey(keyboardEvent, textarea, keyboardEvent.shiftKey)) {
+          this.onContentChange?.(textarea.value);
         }
+        return;
       }
-    };
 
-    element.addEventListener("keydown", handleKeyDown);
-    element.addEventListener("paste", handlePaste);
+      // Enter key handling for smart lists
+      if (keyboardEvent.key === "Enter") {
+        if (handleEnterKey(keyboardEvent, textarea)) {
+          this.onContentChange?.(textarea.value);
+        }
+        return;
+      }
+    }
+  }
+
+  /**
+   * Handle a paste event from the markdown textarea, cleaning up common
+   * clipboard artifacts (literal `\n`/`\t`/`\r` escape sequences). Wire this
+   * through the textarea's `onpaste` vnode attribute for the same autoredraw
+   * reason as `handleKeyDown`.
+   */
+  handlePaste(event: Event): void {
+    const clipboardEvent = event as ClipboardEvent;
+
+    if (this.mode !== "markdown" || !this.textarea) return;
+    const textarea = this.textarea;
+    const pastedText = clipboardEvent.clipboardData?.getData("text/plain");
+    if (!pastedText) return;
+
+    // Fix literal \n, \t, \r escape sequences from clipboard
+    const cleanedText = pastedText
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\r/g, "\r");
+
+    if (cleanedText === pastedText) return;
+    clipboardEvent.preventDefault();
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentValue = textarea.value;
+
+    textarea.value =
+      currentValue.substring(0, start) +
+      cleanedText +
+      currentValue.substring(end);
+
+    const newCursorPos = start + cleanedText.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+
+    this.onContentChange?.(textarea.value);
   }
 
   // Action execution dispatcher
@@ -210,6 +256,9 @@ export class EditorActions {
         break;
       case "orderedList":
         this.orderedList();
+        break;
+      case "taskList":
+        this.taskList();
         break;
       case "indent":
         this.indent();
@@ -392,6 +441,20 @@ export class EditorActions {
     }
   }
 
+  taskList(): void {
+    if (this.mode === "wysiwyg" && this.contentEditable) {
+      this.executeAndNotify(() =>
+        DOMUtils.insertTaskListWYSIWYG(
+          this.contentEditable as ContentEditableElement,
+        ),
+      );
+    } else if (this.textarea) {
+      this.executeAndNotify(() =>
+        MarkdownUtils.smartTaskList(this.textarea as TextArea),
+      );
+    }
+  }
+
   indent(): void {
     if (this.mode === "wysiwyg" && this.contentEditable) {
       this.executeAndNotify(() =>
@@ -519,20 +582,32 @@ export class EditorActions {
     }
   }
 
-  // Editor commands
+  // Editor commands. WYSIWYG undo/redo use our own content history rather
+  // than `document.execCommand("undo"/"redo")`, which is unreliable for
+  // contentEditable elements in modern browsers.
   undo(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.undoWYSIWYG(this.contentEditable as ContentEditableElement),
-      );
+    if (this.mode !== "wysiwyg" || !this.contentEditable) return;
+    const previous = this.history.undo();
+    if (previous === undefined) return;
+    this.isRestoringHistory = true;
+    try {
+      this.contentEditable.innerHTML = previous;
+      this.onContentChange?.(previous);
+    } finally {
+      this.isRestoringHistory = false;
     }
   }
 
   redo(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.redoWYSIWYG(this.contentEditable as ContentEditableElement),
-      );
+    if (this.mode !== "wysiwyg" || !this.contentEditable) return;
+    const next = this.history.redo();
+    if (next === undefined) return;
+    this.isRestoringHistory = true;
+    try {
+      this.contentEditable.innerHTML = next;
+      this.onContentChange?.(next);
+    } finally {
+      this.isRestoringHistory = false;
     }
   }
 
@@ -575,9 +650,7 @@ export class EditorActions {
   // Undo/Redo availability
   canUndo(): boolean {
     if (this.mode === "wysiwyg" && this.contentEditable) {
-      return DOMUtils.canUndoWYSIWYG(
-        this.contentEditable as ContentEditableElement,
-      );
+      return this.history.canUndo();
     }
     // For markdown mode, we don't have undo/redo history
     return false;
@@ -585,9 +658,7 @@ export class EditorActions {
 
   canRedo(): boolean {
     if (this.mode === "wysiwyg" && this.contentEditable) {
-      return DOMUtils.canRedoWYSIWYG(
-        this.contentEditable as ContentEditableElement,
-      );
+      return this.history.canRedo();
     }
     // For markdown mode, we don't have undo/redo history
     return false;

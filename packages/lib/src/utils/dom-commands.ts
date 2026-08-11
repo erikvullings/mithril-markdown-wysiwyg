@@ -86,9 +86,27 @@ export const formatParagraphWYSIWYG: DOMAction = (element) => {
 };
 
 /**
- * Apply blockquote formatting
+ * Whether the current selection sits inside a `<blockquote>`.
+ */
+const isCursorInBlockquote = (): boolean => {
+  const selection = document.getSelection();
+  if (!selection || selection.rangeCount === 0) return false;
+  const node = selection.getRangeAt(0).commonAncestorContainer;
+  const parentElement =
+    node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
+  return parentElement?.closest("blockquote") != null;
+};
+
+/**
+ * Toggle blockquote formatting: wraps the current block in a `<blockquote>`,
+ * or reverts it to a plain paragraph if it's already inside one. Without
+ * this, repeatedly pressing the toolbar button nests another blockquote each
+ * time instead of toggling it off.
  */
 export const formatBlockquoteWYSIWYG: DOMAction = (element) => {
+  if (isCursorInBlockquote()) {
+    return execCommand(element, "formatBlock", "p");
+  }
   return execCommand(element, "formatBlock", "blockquote");
 };
 
@@ -121,9 +139,69 @@ export const outdentWYSIWYG: DOMAction = (element) => {
 };
 
 /**
- * Insert horizontal rule
+ * Whether a collapsed range sits at the very start (or end) of `block`'s
+ * text content, regardless of how many nested inline elements/text nodes it
+ * takes to get there.
+ */
+const isRangeAtBlockStart = (range: Range, block: Element): boolean => {
+  const preRange = document.createRange();
+  preRange.selectNodeContents(block);
+  preRange.setEnd(range.startContainer, range.startOffset);
+  return preRange.toString().length === 0;
+};
+
+const isRangeAtBlockEnd = (range: Range, block: Element): boolean => {
+  const postRange = document.createRange();
+  postRange.selectNodeContents(block);
+  postRange.setStart(range.startContainer, range.startOffset);
+  return postRange.toString().length === 0;
+};
+
+/**
+ * Find an `<hr>` immediately adjacent to a collapsed cursor: either directly
+ * bordering it (cursor sitting between block-level siblings) or just outside
+ * the block whose start/end the cursor is touching.
+ */
+const findAdjacentHorizontalRule = (): HTMLElement | null => {
+  const selection = document.getSelection();
+  if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) {
+    return null;
+  }
+  const range = selection.getRangeAt(0);
+  const { startContainer, startOffset } = range;
+
+  if (startContainer.nodeType === Node.ELEMENT_NODE) {
+    const prev = startContainer.childNodes[startOffset - 1];
+    const next = startContainer.childNodes[startOffset];
+    if (prev instanceof HTMLElement && prev.tagName === "HR") return prev;
+    if (next instanceof HTMLElement && next.tagName === "HR") return next;
+    return null;
+  }
+
+  const block = startContainer.parentElement;
+  if (!block) return null;
+
+  if (isRangeAtBlockStart(range, block)) {
+    const prev = block.previousElementSibling;
+    if (prev?.tagName === "HR") return prev as HTMLElement;
+  }
+  if (isRangeAtBlockEnd(range, block)) {
+    const next = block.nextElementSibling;
+    if (next?.tagName === "HR") return next as HTMLElement;
+  }
+  return null;
+};
+
+/**
+ * Insert a horizontal rule, or remove one the cursor is already sitting
+ * right next to instead of inserting a second one at the same spot.
  */
 export const insertHorizontalRuleWYSIWYG: DOMAction = (element) => {
+  const adjacent = findAdjacentHorizontalRule();
+  if (adjacent) {
+    adjacent.remove();
+    return element.innerHTML;
+  }
   return insertHTML(element, "<hr>");
 };
 
@@ -374,6 +452,121 @@ export const focusAtStart = (element: ContentEditableElement): void => {
     selection.selectAllChildren(element);
     selection.collapseToStart();
   }
+};
+
+/**
+ * Task list utilities for WYSIWYG mode
+ */
+
+/**
+ * Find the list item (LI) that contains the current cursor position
+ */
+export const findCurrentListItem = (): HTMLLIElement | null => {
+  const selection = document.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  let node: Node | null = selection.getRangeAt(0).startContainer;
+  while (node && node !== document.body) {
+    if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === "LI") {
+      return node as HTMLLIElement;
+    }
+    node = node.parentNode;
+  }
+
+  return null;
+};
+
+/**
+ * If the cursor sits inside a non-empty task list item (an `<li>` starting
+ * with a checkbox `<input>`), split it in two: the text after the cursor
+ * moves into a new task item with a fresh, unchecked checkbox, and the
+ * cursor moves there. Returns the updated `innerHTML`, or `null` when the
+ * cursor isn't inside a task item or the item is empty - callers should fall
+ * back to the browser's native Enter handling in that case (which already
+ * exits an empty list item correctly).
+ */
+export const continueTaskListItem = (
+  element: ContentEditableElement,
+): string | null => {
+  const li = findCurrentListItem();
+  if (!li) return null;
+
+  const checkbox = li.firstElementChild;
+  const isTaskItem =
+    checkbox?.nodeName === "INPUT" &&
+    (checkbox as HTMLInputElement).type === "checkbox";
+  if (!isTaskItem) return null;
+
+  if ((li.textContent ?? "").trim() === "") return null;
+
+  const selection = document.getSelection();
+  if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) {
+    return null;
+  }
+  const range = selection.getRangeAt(0);
+  if (!li.contains(range.startContainer) || !li.lastChild) return null;
+
+  const newLi = document.createElement("li");
+  const newCheckbox = document.createElement("input");
+  newCheckbox.type = "checkbox";
+  newCheckbox.disabled = true;
+  newLi.appendChild(newCheckbox);
+  newLi.appendChild(document.createTextNode(" "));
+
+  const moveRange = document.createRange();
+  moveRange.setStart(range.startContainer, range.startOffset);
+  moveRange.setEndAfter(li.lastChild);
+  newLi.appendChild(moveRange.extractContents());
+
+  li.parentNode?.insertBefore(newLi, li.nextSibling);
+
+  const caretRange = document.createRange();
+  caretRange.setStart(newLi, 2);
+  caretRange.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(caretRange);
+
+  return element.innerHTML;
+};
+
+/**
+ * Toggle a checkbox on the current list item, turning it into a task item
+ * (or, if it already is one, back into a plain item). If the cursor isn't
+ * inside a list yet, one is created first via the native list command.
+ */
+export const insertTaskListWYSIWYG: DOMAction = (element) => {
+  let li = findCurrentListItem();
+
+  if (!li) {
+    execCommand(element, "insertUnorderedList");
+    li = findCurrentListItem();
+    if (!li) return element.innerHTML;
+  }
+
+  const existingCheckbox =
+    li.firstElementChild?.nodeName === "INPUT" &&
+    (li.firstElementChild as HTMLInputElement).type === "checkbox"
+      ? (li.firstElementChild as HTMLInputElement)
+      : null;
+
+  if (existingCheckbox) {
+    const spaceNode = existingCheckbox.nextSibling;
+    if (
+      spaceNode?.nodeType === Node.TEXT_NODE &&
+      spaceNode.textContent?.startsWith(" ")
+    ) {
+      spaceNode.textContent = spaceNode.textContent.slice(1);
+    }
+    existingCheckbox.remove();
+  } else {
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.disabled = true;
+    li.insertBefore(document.createTextNode(" "), li.firstChild);
+    li.insertBefore(checkbox, li.firstChild);
+  }
+
+  return element.innerHTML;
 };
 
 /**

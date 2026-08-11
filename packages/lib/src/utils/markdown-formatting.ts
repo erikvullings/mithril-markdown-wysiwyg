@@ -291,6 +291,33 @@ export const smartList =
   };
 
 /**
+ * Toggle a task-list checkbox on the current line: turns a plain, unordered,
+ * or ordered line into `- [ ] text`, or strips the marker back to plain text
+ * when the line is already a task item.
+ */
+export const smartTaskList: MarkdownAction = (textarea) => {
+  const { line } = getCurrentLine(textarea);
+
+  const isTask = /^-\s\[[ xX]\]\s/.test(line);
+  const isUnordered = /^-\s/.test(line);
+  const isOrdered = /^\d+\.\s/.test(line);
+
+  if (isTask) {
+    const newLine = line.replace(/^-\s\[[ xX]\]\s/, "");
+    return replaceLine(textarea, newLine);
+  } else if (isUnordered) {
+    const newLine = line.replace(/^-\s/, "- [ ] ");
+    return replaceLine(textarea, newLine);
+  } else if (isOrdered) {
+    const newLine = line.replace(/^\d+\.\s/, "- [ ] ");
+    return replaceLine(textarea, newLine);
+  } else {
+    const newLine = line ? `- [ ] ${line}` : "- [ ] Task item";
+    return replaceLine(textarea, newLine);
+  }
+};
+
+/**
  * Check if current selection/line has specific formatting
  */
 export const hasFormatting = (

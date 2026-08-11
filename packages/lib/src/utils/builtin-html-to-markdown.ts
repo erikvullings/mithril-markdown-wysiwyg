@@ -390,7 +390,18 @@ export class BuiltinHtmlToMarkdown {
 
     Array.from(listNode.children).forEach((listItem) => {
       if (listItem.nodeName === "LI") {
-        const marker = listType === "OL" ? `${counter}. ` : "- ";
+        const taskCheckbox =
+          listItem.firstElementChild?.nodeName === "INPUT" &&
+          (listItem.firstElementChild as HTMLInputElement).type ===
+            "checkbox"
+            ? (listItem.firstElementChild as HTMLInputElement)
+            : null;
+        const marker =
+          listType === "OL"
+            ? `${counter}. `
+            : taskCheckbox
+              ? `- [${taskCheckbox.checked ? "x" : " "}] `
+              : "- ";
         const itemContent = this._processInlineContainerRecursive(
           listItem,
           options,
