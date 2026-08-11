@@ -447,78 +447,79 @@ export const getCellPosition = (
 };
 
 /**
- * Insert a row above the current cursor position
+ * Insert a row above the row containing the given cell.
+ * If the row is the header row, the new row's cells are also `th` elements.
  */
-export const insertRowAbove = (element: ContentEditableElement): string => {
-  const table = findTableAtCursor();
-  const currentCell = findCurrentTableCell();
+export const insertRowAbove = (
+  element: ContentEditableElement,
+  cell: HTMLTableCellElement,
+): string => {
+  const table = cell.closest("table") as HTMLTableElement | null;
+  const { row: rowIndex } = getCellPosition(cell);
+  if (!table) return element.innerHTML;
 
-  if (!table || !currentCell) return element.innerHTML;
-
-  const { row: rowIndex } = getCellPosition(currentCell);
   const currentRow = table.rows[rowIndex];
   const cellCount = currentRow.cells.length;
-
-  // Create new row
   const newRow = table.insertRow(rowIndex);
+  const isHeaderRow = rowIndex === 0 && currentRow.querySelector("th");
 
-  // Add cells to match the current row
   for (let i = 0; i < cellCount; i++) {
-    const cell = newRow.insertCell();
-    cell.innerHTML = "&nbsp;";
+    const newCell = newRow.insertCell(i);
+    newCell.innerHTML = "&nbsp;";
+    if (isHeaderRow) {
+      const th = document.createElement("th");
+      th.innerHTML = "&nbsp;";
+      newCell.parentNode?.replaceChild(th, newCell);
+    }
   }
 
   return element.innerHTML;
 };
 
 /**
- * Insert a row below the current cursor position
+ * Insert a row below the row containing the given cell.
  */
-export const insertRowBelow = (element: ContentEditableElement): string => {
-  const table = findTableAtCursor();
-  const currentCell = findCurrentTableCell();
+export const insertRowBelow = (
+  element: ContentEditableElement,
+  cell: HTMLTableCellElement,
+): string => {
+  const table = cell.closest("table") as HTMLTableElement | null;
+  const { row: rowIndex } = getCellPosition(cell);
+  if (!table) return element.innerHTML;
 
-  if (!table || !currentCell) return element.innerHTML;
-
-  const { row: rowIndex } = getCellPosition(currentCell);
   const currentRow = table.rows[rowIndex];
   const cellCount = currentRow.cells.length;
-
-  // Create new row
   const newRow = table.insertRow(rowIndex + 1);
 
-  // Add cells to match the current row
   for (let i = 0; i < cellCount; i++) {
-    const cell = newRow.insertCell();
-    cell.innerHTML = "&nbsp;";
+    const newCell = newRow.insertCell(i);
+    newCell.innerHTML = "&nbsp;";
   }
 
   return element.innerHTML;
 };
 
 /**
- * Insert a column to the left of the current cursor position
+ * Insert a column to the left of the column containing the given cell.
+ * If the first row is a header row, the new column's first cell is a `th` too.
  */
-export const insertColumnLeft = (element: ContentEditableElement): string => {
-  const table = findTableAtCursor();
-  const currentCell = findCurrentTableCell();
+export const insertColumnLeft = (
+  element: ContentEditableElement,
+  cell: HTMLTableCellElement,
+): string => {
+  const table = cell.closest("table") as HTMLTableElement | null;
+  const { col: colIndex } = getCellPosition(cell);
+  if (!table) return element.innerHTML;
 
-  if (!table || !currentCell) return element.innerHTML;
-
-  const { col: colIndex } = getCellPosition(currentCell);
-
-  // Add a cell to each row at the specified column index
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
-    const cell = row.insertCell(colIndex);
-
-    // If it's the first row and contains th elements, make this a th too
+    const newCell = row.insertCell(colIndex);
     if (i === 0 && row.querySelector("th")) {
       const th = document.createElement("th");
       th.innerHTML = "&nbsp;";
-      cell.parentNode?.replaceChild(th, cell);
+      newCell.parentNode?.replaceChild(th, newCell);
     } else {
-      cell.innerHTML = "&nbsp;";
+      newCell.innerHTML = "&nbsp;";
     }
   }
 
@@ -526,28 +527,26 @@ export const insertColumnLeft = (element: ContentEditableElement): string => {
 };
 
 /**
- * Insert a column to the right of the current cursor position
+ * Insert a column to the right of the column containing the given cell.
+ * If the first row is a header row, the new column's first cell is a `th` too.
  */
-export const insertColumnRight = (element: ContentEditableElement): string => {
-  const table = findTableAtCursor();
-  const currentCell = findCurrentTableCell();
+export const insertColumnRight = (
+  element: ContentEditableElement,
+  cell: HTMLTableCellElement,
+): string => {
+  const table = cell.closest("table") as HTMLTableElement | null;
+  const { col: colIndex } = getCellPosition(cell);
+  if (!table) return element.innerHTML;
 
-  if (!table || !currentCell) return element.innerHTML;
-
-  const { col: colIndex } = getCellPosition(currentCell);
-
-  // Add a cell to each row at the specified column index + 1
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
-    const cell = row.insertCell(colIndex + 1);
-
-    // If it's the first row and contains th elements, make this a th too
+    const newCell = row.insertCell(colIndex + 1);
     if (i === 0 && row.querySelector("th")) {
       const th = document.createElement("th");
       th.innerHTML = "&nbsp;";
-      cell.parentNode?.replaceChild(th, cell);
+      newCell.parentNode?.replaceChild(th, newCell);
     } else {
-      cell.innerHTML = "&nbsp;";
+      newCell.innerHTML = "&nbsp;";
     }
   }
 
@@ -555,18 +554,15 @@ export const insertColumnRight = (element: ContentEditableElement): string => {
 };
 
 /**
- * Delete the current row
+ * Delete the row containing the given cell. No-op if it's the only row.
  */
-export const deleteCurrentRow = (element: ContentEditableElement): string => {
-  const table = findTableAtCursor();
-  const currentCell = findCurrentTableCell();
-
-  if (!table || !currentCell) return element.innerHTML;
-
-  const { row: rowIndex } = getCellPosition(currentCell);
-
-  // Don't delete if it's the only row
-  if (table.rows.length <= 1) return element.innerHTML;
+export const deleteCurrentRow = (
+  element: ContentEditableElement,
+  cell: HTMLTableCellElement,
+): string => {
+  const table = cell.closest("table") as HTMLTableElement | null;
+  const { row: rowIndex } = getCellPosition(cell);
+  if (!table || table.rows.length <= 1) return element.innerHTML;
 
   table.deleteRow(rowIndex);
 
@@ -574,24 +570,18 @@ export const deleteCurrentRow = (element: ContentEditableElement): string => {
 };
 
 /**
- * Delete the current column
+ * Delete the column containing the given cell. No-op if it's the only column.
  */
 export const deleteCurrentColumn = (
   element: ContentEditableElement,
+  cell: HTMLTableCellElement,
 ): string => {
-  const table = findTableAtCursor();
-  const currentCell = findCurrentTableCell();
-
-  if (!table || !currentCell) return element.innerHTML;
-
-  const { col: colIndex } = getCellPosition(currentCell);
-
-  // Don't delete if it's the only column
-  if (table.rows.length > 0 && table.rows[0].cells.length <= 1) {
+  const table = cell.closest("table") as HTMLTableElement | null;
+  const { col: colIndex } = getCellPosition(cell);
+  if (!table || (table.rows[0] && table.rows[0].cells.length <= 1)) {
     return element.innerHTML;
   }
 
-  // Remove the cell at the specified column index from each row
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
     if (row.cells[colIndex]) {
@@ -603,11 +593,13 @@ export const deleteCurrentColumn = (
 };
 
 /**
- * Delete the entire table
+ * Delete the table containing the given cell.
  */
-export const deleteCurrentTable = (element: ContentEditableElement): string => {
-  const table = findTableAtCursor();
-
+export const deleteCurrentTable = (
+  element: ContentEditableElement,
+  cell: HTMLTableCellElement,
+): string => {
+  const table = cell.closest("table") as HTMLTableElement | null;
   if (!table) return element.innerHTML;
 
   table.remove();

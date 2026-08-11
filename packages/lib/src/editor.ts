@@ -16,20 +16,10 @@ import {
   builtinHtmlToMarkdown,
   detectContentType,
 } from "./utils/builtin-html-to-markdown";
+import * as DOMUtils from "./utils/dom-commands";
+import { markdownToWysiwygHtml } from "./utils/markdown-to-html";
+import { createCursorPositionStore } from "./utils/cursor-position-store";
 import { createI18n } from "./i18n";
-
-// Global cursor position storage to persist across re-renders
-const cursorPositionStorage = {
-  savedSelection: null as { start: number; end: number } | null,
-  savedRange: null as Range | null,
-  savedRangeInfo: null as {
-    startContainer: Node;
-    startOffset: number;
-    endContainer: Node;
-    endOffset: number;
-  } | null,
-  savedScrollPosition: null as { top: number; left: number } | null,
-};
 
 export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let wysiwygContent = "";
@@ -37,6 +27,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let initialized = false;
   let editorActions: EditorActions | null = null;
   let internalMode: "wysiwyg" | "markdown" | null = null;
+  // Scoped to this editor instance, so multiple editors on one page don't
+  // clobber each other's saved cursor/scroll position.
+  const cursorPositionStore = createCursorPositionStore();
 
   // Helper function to safely render markdown with empty content check
   const safeMarkdownToHtml = (
@@ -46,7 +39,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
     if (!markdown || markdown.trim() === "") {
       return "";
     }
-    return markdownToHtml ? markdownToHtml(markdown) : markdown;
+    return markdownToHtml
+      ? markdownToHtml(markdown)
+      : markdownToWysiwygHtml(markdown);
   };
 
   // Modal states
@@ -66,7 +61,6 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
   // Table context menu state
   let tableContextTarget: HTMLElement | null = null;
-  let savedTableScrollPosition: { top: number; left: number } | null = null;
 
   return {
     view: ({ attrs }) => {
@@ -164,6 +158,10 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         }
       };
 
+      editorActions.setOnToggleMode(() =>
+        handleModeChange(currentMode === "wysiwyg" ? "markdown" : "wysiwyg"),
+      );
+
       // Modal handlers
       const handleImageInsert = async (
         src: string,
@@ -198,334 +196,53 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         }
       };
 
-      // Function to save current cursor position
-      const saveCursorPosition = () => {
-        // Save scroll position for both modes
-        const contentEditable = (editorActions as any)?.contentEditable;
-        const textarea = editorActions?.getTextarea();
-        const scrollElement =
-          currentMode === "wysiwyg" ? contentEditable : textarea;
+      const cursorTarget = () => ({
+        mode: currentMode,
+        contentEditable: editorActions?.getContentEditable() ?? null,
+        textarea: editorActions?.getTextarea() ?? null,
+      });
 
-        if (scrollElement) {
-          cursorPositionStorage.savedScrollPosition = {
-            top: scrollElement.scrollTop,
-            left: scrollElement.scrollLeft,
-          };
-          console.log("🔄 Saved scroll position:", {
-            mode: currentMode,
-            scrollTop: scrollElement.scrollTop,
-            scrollLeft: scrollElement.scrollLeft,
-            elementType: scrollElement.tagName,
-          });
-        } else {
-          console.log("❌ No scroll element found for mode:", currentMode);
-        }
+      const saveCursorPosition = () => cursorPositionStore.save(cursorTarget());
 
-        if (
-          currentMode === "markdown" &&
-          document.activeElement instanceof HTMLTextAreaElement
-        ) {
-          const textarea = document.activeElement;
-          cursorPositionStorage.savedSelection = {
-            start: textarea.selectionStart,
-            end: textarea.selectionEnd,
-          };
-        } else if (currentMode === "wysiwyg") {
-          const selection = document.getSelection();
+      const restoreCursorPosition = (): Promise<void> =>
+        cursorPositionStore.restore(cursorTarget());
 
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-
-            // Clone the range to preserve it
-            cursorPositionStorage.savedRange = range.cloneRange();
-
-            // Also save the container and offset information separately
-            cursorPositionStorage.savedRangeInfo = {
-              startContainer: range.startContainer,
-              startOffset: range.startOffset,
-              endContainer: range.endContainer,
-              endOffset: range.endOffset,
-            };
-          }
-        }
-      };
-
-      // Function to restore cursor position
-      const restoreCursorPosition = (): Promise<void> => {
-        return new Promise((resolve) => {
-          if (
-            currentMode === "markdown" &&
-            cursorPositionStorage.savedSelection
-          ) {
-            const textarea = editorActions?.getTextarea();
-            if (textarea) {
-              setTimeout(() => {
-                textarea.setSelectionRange(
-                  cursorPositionStorage.savedSelection!.start,
-                  cursorPositionStorage.savedSelection!.end,
-                );
-                textarea.focus();
-                resolve();
-              }, 0);
-            } else {
-              resolve(); // No saved selection to restore
-            }
-          } else if (
-            currentMode === "wysiwyg" &&
-            cursorPositionStorage.savedRange
-          ) {
-            // Use a longer timeout and ensure the contentEditable is focused first
-            setTimeout(() => {
-              if (editorActions) {
-                const contentEditable = (editorActions as any).contentEditable;
-
-                if (contentEditable) {
-                  contentEditable.focus();
-
-                  const selection = document.getSelection();
-
-                  if (selection && cursorPositionStorage.savedRange) {
-                    try {
-                      // Clear existing selections
-                      selection.removeAllRanges();
-
-                      // Create a new range with the saved information
-                      const newRange = document.createRange();
-
-                      // Try to restore using the saved range info
-                      if (
-                        cursorPositionStorage.savedRangeInfo &&
-                        cursorPositionStorage.savedRangeInfo.startContainer
-                          .parentNode &&
-                        contentEditable.contains(
-                          cursorPositionStorage.savedRangeInfo.startContainer,
-                        )
-                      ) {
-                        newRange.setStart(
-                          cursorPositionStorage.savedRangeInfo.startContainer,
-                          Math.min(
-                            cursorPositionStorage.savedRangeInfo.startOffset,
-                            cursorPositionStorage.savedRangeInfo.startContainer
-                              .textContent?.length || 0,
-                          ),
-                        );
-
-                        if (
-                          cursorPositionStorage.savedRangeInfo.endContainer
-                            .parentNode &&
-                          contentEditable.contains(
-                            cursorPositionStorage.savedRangeInfo.endContainer,
-                          )
-                        ) {
-                          newRange.setEnd(
-                            cursorPositionStorage.savedRangeInfo.endContainer,
-                            Math.min(
-                              cursorPositionStorage.savedRangeInfo.endOffset,
-                              cursorPositionStorage.savedRangeInfo.endContainer
-                                .textContent?.length || 0,
-                            ),
-                          );
-                        } else {
-                          newRange.collapse(true);
-                        }
-                        selection.addRange(newRange);
-                      } else {
-                        // Fallback: place cursor at the end
-                        newRange.selectNodeContents(contentEditable);
-                        newRange.collapse(false);
-                        selection.addRange(newRange);
-                      }
-                    } catch (error) {
-                      console.warn(
-                        "❌ Failed to restore cursor position:",
-                        error,
-                      );
-                      // Final fallback: place cursor at end
-                      const range = document.createRange();
-                      range.selectNodeContents(contentEditable);
-                      range.collapse(false);
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-                }
-              }
-
-              // Restore scroll position
-              if (cursorPositionStorage.savedScrollPosition) {
-                const contentEditable = (editorActions as any)?.contentEditable;
-                if (contentEditable) {
-                  console.log("🔄 Restoring scroll position (WYSIWYG):", {
-                    savedTop: cursorPositionStorage.savedScrollPosition.top,
-                    savedLeft: cursorPositionStorage.savedScrollPosition.left,
-                    currentTop: contentEditable.scrollTop,
-                    currentLeft: contentEditable.scrollLeft,
-                  });
-                  contentEditable.scrollTop =
-                    cursorPositionStorage.savedScrollPosition.top;
-                  contentEditable.scrollLeft =
-                    cursorPositionStorage.savedScrollPosition.left;
-                  console.log("🔄 After restore:", {
-                    newTop: contentEditable.scrollTop,
-                    newLeft: contentEditable.scrollLeft,
-                  });
-                } else {
-                  console.log("❌ No contentEditable found for scroll restore");
-                }
-              } else {
-                console.log("❌ No saved scroll position to restore");
-              }
-
-              cursorPositionStorage.savedSelection = null;
-              cursorPositionStorage.savedRange = null;
-              cursorPositionStorage.savedRangeInfo = null;
-              cursorPositionStorage.savedScrollPosition = null;
-              resolve();
-            }, 10); // Slightly longer timeout for better reliability
-          }
-
-          // Only clean up immediately for non-WYSIWYG modes
-          // For WYSIWYG, cleanup happens after the async restore completes
-          if (currentMode !== "wysiwyg" || !cursorPositionStorage.savedRange) {
-            // Restore scroll position for markdown mode
-            if (cursorPositionStorage.savedScrollPosition) {
-              const textarea = editorActions?.getTextarea();
-              if (textarea) {
-                console.log("🔄 Restoring scroll position (Markdown):", {
-                  savedTop: cursorPositionStorage.savedScrollPosition.top,
-                  savedLeft: cursorPositionStorage.savedScrollPosition.left,
-                  currentTop: textarea.scrollTop,
-                  currentLeft: textarea.scrollLeft,
-                });
-                textarea.scrollTop =
-                  cursorPositionStorage.savedScrollPosition.top;
-                textarea.scrollLeft =
-                  cursorPositionStorage.savedScrollPosition.left;
-                console.log("🔄 After restore (Markdown):", {
-                  newTop: textarea.scrollTop,
-                  newLeft: textarea.scrollLeft,
-                });
-              } else {
-                console.log("❌ No textarea found for scroll restore");
-              }
-            } else {
-              console.log("❌ No saved scroll position to restore (Markdown)");
-            }
-
-            cursorPositionStorage.savedSelection = null;
-            cursorPositionStorage.savedRange = null;
-            cursorPositionStorage.savedRangeInfo = null;
-            cursorPositionStorage.savedScrollPosition = null;
-            resolve();
-          }
-        }); // Close the Promise
+      // Table operations, keyed by the context-menu action name, all delegating
+      // to the same DOMUtils functions used by EditorActions' cursor-based variants.
+      const tableOperations: Record<
+        string,
+        (
+          element: HTMLElement,
+          cell: HTMLTableCellElement,
+        ) => string
+      > = {
+        insertRowAbove: DOMUtils.insertRowAbove,
+        insertRowBelow: DOMUtils.insertRowBelow,
+        insertColumnLeft: DOMUtils.insertColumnLeft,
+        insertColumnRight: DOMUtils.insertColumnRight,
+        deleteRow: DOMUtils.deleteCurrentRow,
+        deleteColumn: DOMUtils.deleteCurrentColumn,
+        deleteTable: DOMUtils.deleteCurrentTable,
       };
 
       // Function to perform table operations with the saved context
       const performTableOperation = (operation: string): void => {
         if (!tableContextTarget || !editorActions) return;
 
-        const contentEditable = (editorActions as any).contentEditable;
+        const contentEditable = editorActions.getContentEditable();
         if (!contentEditable) return;
 
-        // Get the table and cell info from our saved context
         const cell = tableContextTarget as HTMLTableCellElement;
-        const table = cell.closest("table") as HTMLTableElement;
-        if (!table) return;
+        const run = tableOperations[operation];
+        if (!run) return;
 
         // Save scroll position
         const scrollTop = contentEditable.scrollTop;
         const scrollLeft = contentEditable.scrollLeft;
 
         try {
-          switch (operation) {
-            case "insertRowAbove": {
-              const row = cell.closest("tr") as HTMLTableRowElement;
-              const rowIndex = Array.from(table.rows).indexOf(row);
-              const cellCount = row.cells.length;
-              const newRow = table.insertRow(rowIndex);
-              for (let i = 0; i < cellCount; i++) {
-                const newCell = newRow.insertCell(i);
-                newCell.innerHTML = "&nbsp;";
-                // If first row has th elements, make this a th too
-                if (rowIndex === 0 && row.querySelector("th")) {
-                  const th = document.createElement("th");
-                  th.innerHTML = "&nbsp;";
-                  newCell.parentNode?.replaceChild(th, newCell);
-                }
-              }
-              break;
-            }
-            case "insertRowBelow": {
-              const row = cell.closest("tr") as HTMLTableRowElement;
-              const rowIndex = Array.from(table.rows).indexOf(row);
-              const cellCount = row.cells.length;
-              const newRow = table.insertRow(rowIndex + 1);
-              for (let i = 0; i < cellCount; i++) {
-                const newCell = newRow.insertCell(i);
-                newCell.innerHTML = "&nbsp;";
-              }
-              break;
-            }
-            case "insertColumnLeft": {
-              const row = cell.closest("tr") as HTMLTableRowElement;
-              const colIndex = Array.from(row.cells).indexOf(cell);
-              for (let i = 0; i < table.rows.length; i++) {
-                const currentRow = table.rows[i];
-                const newCell = currentRow.insertCell(colIndex);
-                newCell.innerHTML = "&nbsp;";
-                // If it's the first row and contains th elements, make this a th too
-                if (i === 0 && currentRow.querySelector("th")) {
-                  const th = document.createElement("th");
-                  th.innerHTML = "&nbsp;";
-                  newCell.parentNode?.replaceChild(th, newCell);
-                }
-              }
-              break;
-            }
-            case "insertColumnRight": {
-              const row = cell.closest("tr") as HTMLTableRowElement;
-              const colIndex = Array.from(row.cells).indexOf(cell);
-              for (let i = 0; i < table.rows.length; i++) {
-                const currentRow = table.rows[i];
-                const newCell = currentRow.insertCell(colIndex + 1);
-                newCell.innerHTML = "&nbsp;";
-                // If it's the first row and contains th elements, make this a th too
-                if (i === 0 && currentRow.querySelector("th")) {
-                  const th = document.createElement("th");
-                  th.innerHTML = "&nbsp;";
-                  newCell.parentNode?.replaceChild(th, newCell);
-                }
-              }
-              break;
-            }
-            case "deleteRow": {
-              const row = cell.closest("tr") as HTMLTableRowElement;
-              if (table.rows.length > 1) {
-                row.remove();
-              }
-              break;
-            }
-            case "deleteColumn": {
-              const row = cell.closest("tr") as HTMLTableRowElement;
-              const colIndex = Array.from(row.cells).indexOf(cell);
-              if (table.rows.length > 0 && table.rows[0].cells.length > 1) {
-                for (let i = 0; i < table.rows.length; i++) {
-                  if (table.rows[i].cells[colIndex]) {
-                    table.rows[i].deleteCell(colIndex);
-                  }
-                }
-              }
-              break;
-            }
-            case "deleteTable": {
-              table.remove();
-              break;
-            }
-          }
-
-          // Notify content change
-          onContentChange?.(contentEditable.innerHTML);
+          const newContent = run(contentEditable, cell);
+          onContentChange?.(newContent);
 
           // Restore scroll position
           setTimeout(() => {
@@ -702,18 +419,6 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                       // Save the specific target element (cell) that was clicked
                       tableContextTarget = target.closest("td, th") || target;
 
-                      // Save scroll position before showing table menu
-                      if (editorActions) {
-                        const contentEditable = (editorActions as any)
-                          .contentEditable;
-                        if (contentEditable) {
-                          savedTableScrollPosition = {
-                            top: contentEditable.scrollTop,
-                            left: contentEditable.scrollLeft,
-                          };
-                        }
-                      }
-
                       // Save cursor position before showing table menu
                       saveCursorPosition();
 
@@ -800,6 +505,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
           // Modals
           m(ImageModal, {
             isOpen: showImageModal,
+            t,
             onClose: () => {
               showImageModal = false;
               m.redraw();
@@ -809,6 +515,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
           m(LinkModal, {
             isOpen: showLinkModal,
+            t,
             onClose: () => {
               showLinkModal = false;
               m.redraw();
@@ -834,56 +541,48 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             onClose: () => {
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
             onInsertRowAbove: () => {
               performTableOperation("insertRowAbove");
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
             onInsertRowBelow: () => {
               performTableOperation("insertRowBelow");
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
             onInsertColumnLeft: () => {
               performTableOperation("insertColumnLeft");
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
             onInsertColumnRight: () => {
               performTableOperation("insertColumnRight");
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
             onDeleteRow: () => {
               performTableOperation("deleteRow");
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
             onDeleteColumn: () => {
               performTableOperation("deleteColumn");
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
             onDeleteTable: () => {
               performTableOperation("deleteTable");
               showTableMenu = false;
               tableContextTarget = null;
-              savedTableScrollPosition = null;
               m.redraw();
             },
           }),

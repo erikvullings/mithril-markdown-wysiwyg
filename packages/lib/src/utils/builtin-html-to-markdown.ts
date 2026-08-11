@@ -1,6 +1,9 @@
 /**
- * Built-in HTML to Markdown conversion based on the original markdown-wysiwyg implementation
- * This eliminates the need for clients to provide their own htmlToMarkdown function
+ * Built-in HTML to Markdown conversion, walking the DOM directly (`document`,
+ * `DOMParser`) rather than using regex. This is `MarkdownEditor`'s default
+ * `htmlToMarkdown` implementation when a consumer doesn't supply their own,
+ * eliminating the need for every client to provide one. Browser-only; for a
+ * DOM-free (regex-based) alternative see `html-to-markdown.ts`.
  */
 
 export class BuiltinHtmlToMarkdown {

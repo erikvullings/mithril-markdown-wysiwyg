@@ -1,8 +1,11 @@
 import m from "mithril";
 import { Modal } from "./modal";
+import { FormField, inputStyle } from "./modal-form-field";
+import type { I18nStrings } from "../i18n";
 
 export interface LinkModalAttrs {
   isOpen: boolean;
+  t: (key: keyof I18nStrings) => string;
   onClose: () => void;
   onInsert: (url: string, text: string, title?: string) => void;
   initialValues?: {
@@ -27,7 +30,7 @@ export const LinkModal: m.FactoryComponent<LinkModalAttrs> = () => {
     },
 
     view: ({ attrs }) => {
-      const { isOpen, onClose, onInsert } = attrs;
+      const { isOpen, t, onClose, onInsert } = attrs;
 
       const handleInsert = () => {
         if (state.url.trim() && state.text.trim()) {
@@ -44,44 +47,24 @@ export const LinkModal: m.FactoryComponent<LinkModalAttrs> = () => {
         }
       };
 
-      const inputStyle = {
-        width: "100%",
-        padding: "8px 12px",
-        border: "1px solid var(--border-color, #ddd)",
-        borderRadius: "4px",
-        fontSize: "14px",
-        backgroundColor: "var(--input-bg, white)",
-        color: "var(--text-color, black)",
-      };
-
-      const labelStyle = {
-        display: "block",
-        marginBottom: "5px",
-        fontWeight: "500",
-        fontSize: "14px",
-      };
-
-      const fieldStyle = {
-        marginBottom: "15px",
-      };
-
       return m(
         Modal,
         {
           isOpen,
-          title: "Insert Link",
+          title: t("insertLinkTitle"),
           onClose,
           onConfirm: handleInsert,
-          confirmText: "Insert",
+          confirmText: t("insert"),
+          cancelText: t("cancel"),
           size: "medium",
         },
         [
           m(".md-link-form", [
-            m(".md-field", { style: fieldStyle }, [
-              m("label", { style: labelStyle }, "Link Text *"),
+            FormField(
+              t("linkText") + " *",
               m("input[type=text]", {
                 style: inputStyle,
-                placeholder: "Text to display",
+                placeholder: t("linkTextPlaceholder"),
                 value: state.text,
                 oninput: (e: Event) => {
                   state.text = (e.target as HTMLInputElement).value;
@@ -91,31 +74,31 @@ export const LinkModal: m.FactoryComponent<LinkModalAttrs> = () => {
                   setTimeout(() => (dom as HTMLInputElement).focus(), 100);
                 },
               }),
-            ]),
+            ),
 
-            m(".md-field", { style: fieldStyle }, [
-              m("label", { style: labelStyle }, "URL *"),
+            FormField(
+              t("linkUrl") + " *",
               m("input[type=url]", {
                 style: inputStyle,
-                placeholder: "https://example.com",
+                placeholder: t("linkUrlPlaceholder"),
                 value: state.url,
                 oninput: (e: Event) => {
                   state.url = (e.target as HTMLInputElement).value;
                 },
               }),
-            ]),
+            ),
 
-            m(".md-field", { style: fieldStyle }, [
-              m("label", { style: labelStyle }, "Title (optional)"),
+            FormField(
+              t("linkTitle"),
               m("input[type=text]", {
                 style: inputStyle,
-                placeholder: "Link title for tooltip",
+                placeholder: t("linkTitlePlaceholder"),
                 value: state.title,
                 oninput: (e: Event) => {
                   state.title = (e.target as HTMLInputElement).value;
                 },
               }),
-            ]),
+            ),
 
             // Preview if both URL and text are provided
             state.url &&

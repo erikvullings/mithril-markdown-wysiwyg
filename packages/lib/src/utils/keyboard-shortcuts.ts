@@ -97,12 +97,6 @@ export const defaultShortcuts: KeyboardShortcut[] = [
 
   // Mode switching
   { key: "m", ctrl: true, action: "toggleMode", description: "Toggle mode" },
-  {
-    key: "p",
-    ctrl: true,
-    action: "togglePreview",
-    description: "Toggle preview",
-  },
 ];
 
 /**
@@ -261,9 +255,7 @@ export const getShortcutsByCategory = (
     ),
     media: shortcuts.filter((s) => ["link", "image"].includes(s.action)),
     editor: shortcuts.filter((s) =>
-      ["undo", "redo", "selectAll", "toggleMode", "togglePreview"].includes(
-        s.action,
-      ),
+      ["undo", "redo", "selectAll", "toggleMode"].includes(s.action),
     ),
   };
 

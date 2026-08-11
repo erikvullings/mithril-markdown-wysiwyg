@@ -15,8 +15,11 @@ export interface I18nStrings {
   undo: string;
   redo: string;
   heading: string;
+  paragraph: string;
   indent: string;
   outdent: string;
+  checklist: string;
+  clearFormat: string;
 
   // Table menu
   insertRowAbove: string;
@@ -38,6 +41,7 @@ export interface I18nStrings {
   insertTableTitle: string;
   linkText: string;
   linkUrl: string;
+  linkTitle: string;
   imageAlt: string;
   imageUrl: string;
   imageTitle: string;
@@ -49,6 +53,7 @@ export interface I18nStrings {
   // Placeholders
   linkTextPlaceholder: string;
   linkUrlPlaceholder: string;
+  linkTitlePlaceholder: string;
   imageAltPlaceholder: string;
   imageUrlPlaceholder: string;
   imageTitlePlaceholder: string;
@@ -79,8 +84,11 @@ export const defaultStrings: I18nStrings = {
   undo: "Undo",
   redo: "Redo",
   heading: "Heading",
+  paragraph: "Paragraph",
   indent: "Increase Indent",
   outdent: "Decrease Indent",
+  checklist: "Task List",
+  clearFormat: "Clear Formatting",
 
   // Table menu
   insertRowAbove: "Insert Row Above",
@@ -102,6 +110,7 @@ export const defaultStrings: I18nStrings = {
   insertTableTitle: "Insert Table",
   linkText: "Link Text",
   linkUrl: "URL",
+  linkTitle: "Title (optional)",
   imageAlt: "Alt Text",
   imageUrl: "Image URL",
   imageTitle: "Title (optional)",
@@ -113,6 +122,7 @@ export const defaultStrings: I18nStrings = {
   // Placeholders
   linkTextPlaceholder: "Enter link text",
   linkUrlPlaceholder: "https://example.com",
+  linkTitlePlaceholder: "Link title for tooltip",
   imageAltPlaceholder: "Alt text",
   imageUrlPlaceholder: "https://example.com/image.jpg",
   imageTitlePlaceholder: "Image title",

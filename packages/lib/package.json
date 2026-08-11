@@ -21,6 +21,7 @@
   "bugs": {
     "url": "https://github.com/erikvullings/mithril-markdown-wysiwyg/issues"
   },
+  "sideEffects": false,
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "type": "module",
@@ -58,6 +59,9 @@
   },
   "peerDependencies": {
     "mithril": "^2.3.8"
+  },
+  "dependencies": {
+    "slimdown-js": "^1.4.1"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^7.0.0",

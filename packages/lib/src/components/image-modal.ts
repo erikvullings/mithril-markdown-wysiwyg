@@ -1,8 +1,11 @@
 import m from "mithril";
 import { Modal } from "./modal";
+import { FormField, inputStyle } from "./modal-form-field";
+import type { I18nStrings } from "../i18n";
 
 export interface ImageModalAttrs {
   isOpen: boolean;
+  t: (key: keyof I18nStrings) => string;
   onClose: () => void;
   onInsert: (src: string, alt: string, title?: string) => void;
   initialValues?: {
@@ -27,7 +30,7 @@ export const ImageModal: m.FactoryComponent<ImageModalAttrs> = () => {
     },
 
     view: ({ attrs }) => {
-      const { isOpen, onClose, onInsert } = attrs;
+      const { isOpen, t, onClose, onInsert } = attrs;
 
       const handleInsert = () => {
         if (state.src.trim()) {
@@ -44,44 +47,24 @@ export const ImageModal: m.FactoryComponent<ImageModalAttrs> = () => {
         }
       };
 
-      const inputStyle = {
-        width: "100%",
-        padding: "8px 12px",
-        border: "1px solid var(--border-color, #ddd)",
-        borderRadius: "4px",
-        fontSize: "14px",
-        backgroundColor: "var(--input-bg, white)",
-        color: "var(--text-color, black)",
-      };
-
-      const labelStyle = {
-        display: "block",
-        marginBottom: "5px",
-        fontWeight: "500",
-        fontSize: "14px",
-      };
-
-      const fieldStyle = {
-        marginBottom: "15px",
-      };
-
       return m(
         Modal,
         {
           isOpen,
-          title: "Insert Image",
+          title: t("insertImageTitle"),
           onClose,
           onConfirm: handleInsert,
-          confirmText: "Insert",
+          confirmText: t("insert"),
+          cancelText: t("cancel"),
           size: "medium",
         },
         [
           m(".md-image-form", [
-            m(".md-field", { style: fieldStyle }, [
-              m("label", { style: labelStyle }, "Image URL *"),
+            FormField(
+              t("imageUrl") + " *",
               m("input[type=url]", {
                 style: inputStyle,
-                placeholder: "https://example.com/image.jpg",
+                placeholder: t("imageUrlPlaceholder"),
                 value: state.src,
                 oninput: (e: Event) => {
                   state.src = (e.target as HTMLInputElement).value;
@@ -91,31 +74,31 @@ export const ImageModal: m.FactoryComponent<ImageModalAttrs> = () => {
                   setTimeout(() => (dom as HTMLInputElement).focus(), 100);
                 },
               }),
-            ]),
+            ),
 
-            m(".md-field", { style: fieldStyle }, [
-              m("label", { style: labelStyle }, "Alt Text"),
+            FormField(
+              t("imageAlt"),
               m("input[type=text]", {
                 style: inputStyle,
-                placeholder: "Describe the image",
+                placeholder: t("imageAltPlaceholder"),
                 value: state.alt,
                 oninput: (e: Event) => {
                   state.alt = (e.target as HTMLInputElement).value;
                 },
               }),
-            ]),
+            ),
 
-            m(".md-field", { style: fieldStyle }, [
-              m("label", { style: labelStyle }, "Title (optional)"),
+            FormField(
+              t("imageTitle"),
               m("input[type=text]", {
                 style: inputStyle,
-                placeholder: "Image title for tooltip",
+                placeholder: t("imageTitlePlaceholder"),
                 value: state.title,
                 oninput: (e: Event) => {
                   state.title = (e.target as HTMLInputElement).value;
                 },
               }),
-            ]),
+            ),
 
             // Preview if URL is provided
             state.src &&

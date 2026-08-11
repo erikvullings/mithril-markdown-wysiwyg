@@ -1,6 +1,9 @@
 /**
- * Enhanced HTML to Markdown conversion utilities
- * Handles complex HTML structures and preserves formatting integrity
+ * HTML to Markdown conversion utilities, implemented with regex only (no DOM
+ * APIs), so it also runs outside a browser (SSR, Node). Exported for advanced/
+ * custom `htmlToMarkdown` use; not used internally by `MarkdownEditor`, which
+ * defaults to the DOM-walking converter in `builtin-html-to-markdown.ts` when
+ * a consumer doesn't supply their own `htmlToMarkdown` prop.
  */
 
 export interface ConversionOptions {

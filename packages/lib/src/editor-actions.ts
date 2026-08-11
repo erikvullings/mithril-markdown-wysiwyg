@@ -32,6 +32,7 @@ export class EditorActions {
   private textarea: HTMLTextAreaElement | null = null;
   private contentEditable: HTMLElement | null = null;
   private onContentChange?: (content: string) => void;
+  private onToggleMode?: () => void;
 
   constructor(onContentChange?: (content: string) => void) {
     this.onContentChange = onContentChange;
@@ -40,6 +41,11 @@ export class EditorActions {
   // Configuration methods
   setOnContentChange(fn?: (content: string) => void): void {
     this.onContentChange = fn;
+  }
+
+  /** Called when the "toggleMode" keyboard shortcut (Ctrl/Cmd+M) fires. */
+  setOnToggleMode(fn?: () => void): void {
+    this.onToggleMode = fn;
   }
 
   setTextarea(element: HTMLTextAreaElement): void {
@@ -54,6 +60,10 @@ export class EditorActions {
   setContentEditable(element: HTMLElement): void {
     this.contentEditable = element;
     this.setupKeyboardHandlers(element);
+  }
+
+  getContentEditable(): HTMLElement | null {
+    return this.contentEditable;
   }
 
   setMode(mode: "wysiwyg" | "markdown"): void {
@@ -239,6 +249,9 @@ export class EditorActions {
         break;
       case "removeFormat":
         this.removeFormat();
+        break;
+      case "toggleMode":
+        this.onToggleMode?.();
         break;
 
       default:
@@ -590,69 +603,45 @@ export class EditorActions {
   }
 
   // Table manipulation methods (WYSIWYG mode only)
+  // All operate on the table cell containing the current cursor position.
+  private withCurrentCell(
+    run: (
+      element: ContentEditableElement,
+      cell: HTMLTableCellElement,
+    ) => string,
+  ): void {
+    if (this.mode !== "wysiwyg" || !this.contentEditable) return;
+    const cell = DOMUtils.findCurrentTableCell();
+    if (!cell) return;
+    const element = this.contentEditable as ContentEditableElement;
+    this.executeAndNotify(() => run(element, cell));
+  }
+
   insertRowAbove(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.insertRowAbove(this.contentEditable as ContentEditableElement),
-      );
-    }
+    this.withCurrentCell(DOMUtils.insertRowAbove);
   }
 
   insertRowBelow(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.insertRowBelow(this.contentEditable as ContentEditableElement),
-      );
-    }
+    this.withCurrentCell(DOMUtils.insertRowBelow);
   }
 
   insertColumnLeft(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.insertColumnLeft(
-          this.contentEditable as ContentEditableElement,
-        ),
-      );
-    }
+    this.withCurrentCell(DOMUtils.insertColumnLeft);
   }
 
   insertColumnRight(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.insertColumnRight(
-          this.contentEditable as ContentEditableElement,
-        ),
-      );
-    }
+    this.withCurrentCell(DOMUtils.insertColumnRight);
   }
 
   deleteCurrentRow(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.deleteCurrentRow(
-          this.contentEditable as ContentEditableElement,
-        ),
-      );
-    }
+    this.withCurrentCell(DOMUtils.deleteCurrentRow);
   }
 
   deleteCurrentColumn(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.deleteCurrentColumn(
-          this.contentEditable as ContentEditableElement,
-        ),
-      );
-    }
+    this.withCurrentCell(DOMUtils.deleteCurrentColumn);
   }
 
   deleteCurrentTable(): void {
-    if (this.mode === "wysiwyg" && this.contentEditable) {
-      this.executeAndNotify(() =>
-        DOMUtils.deleteCurrentTable(
-          this.contentEditable as ContentEditableElement,
-        ),
-      );
-    }
+    this.withCurrentCell(DOMUtils.deleteCurrentTable);
   }
 }
