@@ -4,9 +4,9 @@
   "description": "Example app demonstrating the Mithril Markdown WYSIWYG editor",
   "private": true,
   "scripts": {
-    "dev": "rspack serve",
-    "build": "rspack build",
-    "preview": "http-server ../../docs -p 3000"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 3000"
   },
   "dependencies": {
     "mithril": "^2.3.8",
@@ -15,12 +15,8 @@
     "slimdown-js": "^1.4.1"
   },
   "devDependencies": {
-    "@rspack/cli": "2.1.8",
-    "@rspack/core": "2.1.8",
     "@types/mithril": "2.2.8",
-    "css-loader": "^7.1.4",
-    "html-webpack-plugin": "^5.6.8",
-    "style-loader": "^4.0.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
   }
 }

@@ -37,14 +37,14 @@ export default defineConfig(({ mode }) => {
       },
       terserOptions: isUmdMin
         ? {
-            compress: {
-              drop_console: true,
-              drop_debugger: true,
-            },
-            mangle: {
-              reserved: ["MarkdownEditor"],
-            },
-          }
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+          },
+          mangle: {
+            reserved: ["MarkdownEditor"],
+          },
+        }
         : undefined,
     },
   };
