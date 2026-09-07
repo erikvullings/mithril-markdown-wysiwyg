@@ -14,6 +14,7 @@ This is a **powerful** WYSIWYG markdown editor built with *Mithril.js*.
 - **Theme Support**: Light and dark themes
 - **Rich Toolbar**: Full formatting options
 - **Real-time Preview**: See your markdown rendered instantly
+- **Find and Replace**: Press Cmd/Ctrl+F to find or Cmd/Ctrl+H to replace
 - **Pluggable Renderers**: Use marked.js or slimdown-js
 
 ### Formatting Examples
@@ -178,6 +179,10 @@ const App = () => {
 
         m("div.demo-section", [
           m("h2", `Editor with ${state.editor1.renderer} renderer`),
+          m(
+            "p",
+            "Search with Cmd/Ctrl+F, or open find and replace with Cmd/Ctrl+H. Use the icon buttons for case-sensitive, whole-word, and regular-expression matching.",
+          ),
           m("div.controls", [
             m("button.theme-toggle", { onclick: toggleTheme }, "Toggle Theme"),
             m(
@@ -412,6 +417,10 @@ const App = () => {
                 "🎛️ Configurable UI: hide tabs, toolbar, or customize themes",
               ),
               m("li", "🔍 Built-in empty content handling"),
+              m(
+                "li",
+                "🔎 Find and replace with match navigation, case-sensitive, whole-word, and regular-expression options",
+              ),
             ]),
             m("h3", "Renderers:"),
             m("ul", [

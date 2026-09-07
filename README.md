@@ -260,6 +260,10 @@ the portable marker `<!-- markdown:page-break -->`; rendered HTML uses a
 `role="doc-pagebreak"` element with both `break-after: page` and
 `page-break-after: always` styling for EPUB compatibility.
 
+The built-in `slimdown-js` renderer supports soft paragraph continuations and
+Markdown hard breaks (`two trailing spaces + newline`), including continuations
+inside list items. These remain distinct in rendered HTML and EPUB output.
+
 Set `hideBase64Images: true` to replace inline base64 payloads with compact,
 size-labelled placeholders in Markdown mode. The original data remains in the
 editor value and images continue to render normally in WYSIWYG mode.

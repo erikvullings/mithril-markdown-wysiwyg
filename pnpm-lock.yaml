@@ -20,8 +20,8 @@ importers:
         specifier: workspace:*
         version: link:../lib
       slimdown-js:
-        specifier: ^1.5.1
-        version: 1.5.1
+        specifier: ^1.5.2
+        version: 1.5.2
     devDependencies:
       '@types/mithril':
         specifier: 2.2.9
@@ -36,8 +36,8 @@ importers:
   packages/lib:
     dependencies:
       slimdown-js:
-        specifier: ^1.5.1
-        version: 1.5.1
+        specifier: ^1.5.2
+        version: 1.5.2
     devDependencies:
       '@semantic-release/changelog':
         specifier: ^7.0.0
@@ -1623,8 +1623,8 @@ packages:
     resolution: {integrity: sha512-kUMbT1oBJCpgrnKoSr0o6wPtvRWT9W9UKvGLwfJYO2WuahZRHOpEyL1ckyMGgMWh0UdpmaoFqKKD29WTomNEGA==}
     engines: {node: '>=8'}
 
-  slimdown-js@1.5.1:
-    resolution: {integrity: sha512-CoFpu4YyCn6PA45l/qfIWcERGiYVtvYW7V49QfJJ7A7aXv5THi/Yh3e1VsGZK8NRD0ZHdUykQra78F/zMrTesw==}
+  slimdown-js@1.5.2:
+    resolution: {integrity: sha512-HHbbcmuVpPsnb3OXjp9auGlLhFzii+lJ6rq5JMzluwVPacWWdoTaOFKiugZumrUiLOiZMRe7+cKyBi3Aw/s1UA==}
     engines: {node: '>=16'}
 
   source-map-js@1.2.1:
@@ -3426,7 +3426,7 @@ snapshots:
     dependencies:
       unicode-emoji-modifier-base: 1.0.0
 
-  slimdown-js@1.5.1: {}
+  slimdown-js@1.5.2: {}
 
   source-map-js@1.2.1: {}
 
