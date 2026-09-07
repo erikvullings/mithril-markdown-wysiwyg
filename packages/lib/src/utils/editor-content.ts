@@ -1,7 +1,6 @@
-export const PAGE_BREAK_MARKER = "<!-- markdown:page-break -->";
+import { PAGE_BREAK_HTML, PAGE_BREAK_MARKER } from "slimdown-js";
 
-export const PAGE_BREAK_HTML =
-  '<div class="md-page-break" data-markdown-page-break="true" role="doc-pagebreak" aria-label="Page break"></div>';
+export { PAGE_BREAK_HTML, PAGE_BREAK_MARKER };
 
 const BASE64_IMAGE_PATTERN =
   /data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=]+)/gi;
@@ -15,6 +14,11 @@ export interface MaskedMarkdown {
   display: string;
   hiddenImages: HiddenBase64Image[];
 }
+
+export const isPageBreakMarkerLine = (line: string): boolean => {
+  const marker = line.match(/^ {0,3}(.*?)[ \t\r]*$/);
+  return marker?.[1] === PAGE_BREAK_MARKER;
+};
 
 export const expandPageBreakMarkers = (markdown: string): string => {
   let fence: { marker: "`" | "~"; length: number } | null = null;
@@ -43,9 +47,7 @@ export const expandPageBreakMarkers = (markdown: string): string => {
         return line;
       }
 
-      return /^ {0,3}<!-- markdown:page-break -->[ \t]*$/.test(line)
-        ? PAGE_BREAK_HTML
-        : line;
+      return isPageBreakMarkerLine(line) ? PAGE_BREAK_HTML : line;
     })
     .join("\n");
 };

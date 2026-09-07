@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { PAGE_BREAK_HTML } from "slimdown-js";
 import { EditorActions } from "./editor-actions";
 
 const makeKeyEvent = (
@@ -253,6 +254,34 @@ describe("EditorActions taskList action", () => {
       expect(textarea.value).toBe(
         "before\n\n<!-- markdown:page-break -->\n\n",
       );
+    });
+
+    it("inserts the semantic element in WYSIWYG mode with undo and redo", () => {
+      const { actions, div } = makeEditor();
+      const originalExecCommand = document.execCommand;
+      document.execCommand = vi.fn((_command, _showUi, value) => {
+        div.insertAdjacentHTML("beforeend", String(value));
+        return true;
+      }) as typeof document.execCommand;
+
+      try {
+        actions.executeAction("pageBreak");
+        expect(
+          div.querySelector('[data-markdown-page-break="true"]')?.outerHTML,
+        ).toBe(PAGE_BREAK_HTML);
+
+        actions.undo();
+        expect(
+          div.querySelector('[data-markdown-page-break="true"]'),
+        ).toBeNull();
+
+        actions.redo();
+        expect(
+          div.querySelector('[data-markdown-page-break="true"]')?.outerHTML,
+        ).toBe(PAGE_BREAK_HTML);
+      } finally {
+        document.execCommand = originalExecCommand;
+      }
     });
   });
 

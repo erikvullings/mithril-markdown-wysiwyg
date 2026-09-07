@@ -21,6 +21,10 @@ A powerful WYSIWYG markdown editor built with Mithril.js, featuring dual-mode ed
 
 Visit the [live demo](https://erikvullings.github.io/mithril-markdown-wysiwyg) to see the editor in action.
 
+| Light theme | Dark theme |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/erikvullings/mithril-markdown-wysiwyg/main/docs/assets/editor-light.webp" alt="Mithril Markdown WYSIWYG editor using the light theme" width="560"> | <img src="https://raw.githubusercontent.com/erikvullings/mithril-markdown-wysiwyg/main/docs/assets/editor-dark.webp" alt="Mithril Markdown WYSIWYG editor using the dark theme" width="560"> |
+
 ## Installation
 
 ```bash

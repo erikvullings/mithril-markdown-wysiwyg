@@ -21,6 +21,10 @@ A powerful WYSIWYG markdown editor built with Mithril.js, featuring dual-mode ed
 
 Visit the [live demo](https://erikvullings.github.io/mithril-markdown-wysiwyg) to see the editor in action.
 
+| Light theme | Dark theme |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/erikvullings/mithril-markdown-wysiwyg/main/docs/assets/editor-light.webp" alt="Mithril Markdown WYSIWYG editor using the light theme" width="560"> | <img src="https://raw.githubusercontent.com/erikvullings/mithril-markdown-wysiwyg/main/docs/assets/editor-dark.webp" alt="Mithril Markdown WYSIWYG editor using the dark theme" width="560"> |
+
 Try the editor directly in the browser with the [live Flems example](https://flems.io/#0=N4IgtglgJlA2CmIBcAWArAGhAZ3ggxgC7xTIgB0AVtiFgGYQI1IDaoAdgIZiJIUAWhMLFoh8Ae3bEpZADxhOEdgAJoAXgA6ITgAcdWgHyyA9AqUGQAXwwduvCtVESp8GX2fZCy4MoCynACcAayhxAHd2AFEoCEJxAOVLZTU-WP4Axn9g0IiAdQBNAGUASQKAcQBuDXZqhC9PTmJk72rlZTBxKHgkZS0FbPCa2lblQn54Hh6tTgBXOK0MEedpQh6AAwBiZUiABQBVACFlElilAHNlLo7q6r3cZQAqB4BhMChjZ8IA2ABqADEnqNxMoGOwoKN4AAPLycMGPF5vD5fX4ACUBcWUAXgOlgnHw8FUhHIN3YOyx2Gw2xcCTo8WUnGU7HgYWUOkCnDOAV0-HpcMK-AgdEIP0i1JBdIZ-EC4NgSgJACMsZwgsSauw7gSxgSdhyCQclUEgeJYPLAsp5XM4ioMUpcAFViTZABCAC0LvagRCgyQbLO8BdivgyuUboMJIAKuMPcF4AlsDMAgA3CCJ+CUrJeiIYZQo8O+AAy2dh4N2h2U4jmOjm5DW1UsVTVHi8AEE9M1gCNk8yegAKACUyQM7R7GZyURicQC2Y7KjaymWrlWygaxHIC6ki1nbQ6XR6K-g5B38E3c9G40my8IjQPWp4J7ncWNpoCPS+M2PIza2H44XDnHl2CvgE773m0ApdAcnC4AAbCgxQKH6gGjMBH5buW7DPJIKzPFK7B+j065eGoQ77muWGLs0hGgehvidPAOGwvh7R0YOl7XoeLEpEeIyWH2dYNtUYAcTMUg9qE+AzDwUjkAAju+AQAJ6FHg8BEPEPZaBsuj6CAfbZq2Oh9hUVg2CAXA8GQa4Uk45FuCAgjCNm8qdAp3jRmcSg9AADBU7RKC64wQGcgg9AAjF5XkAKS+ZY1TOVArk+GyMDnGFWJgL5pr4EEnIVmCPQbHQ0F0AAHHQnAxdUWltj4gXBUuJVeYm-C+QokIumE0BjGFEVeTokKtYEHnsD0sxxDFVgALpYLK7BBMwbBmXYZCQGMGQiFgCYiHwgiEDogHGMYIk6DlZFgKYaTrQAAgATOQADM5AlRda2MIeShUDQWCEApOj2Ng+AZDohAmbYFl8Cck6iFtZC7ftSCHcdp0SOdq3pIwLr9Jm7AdQp2AQGEClnFduLEJ4xgxOTShdJC5CSVA73sJ9og-X9ZAA0DIPWGD9iQ3SngKUw0PfLDhB7QdR3sCdZxnS96OwJjnpjrj+OE8TpNpoQFMQFTYJQlZX0gKz-0-QgU2WEAA).
 
 ## Installation
