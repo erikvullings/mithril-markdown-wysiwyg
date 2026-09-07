@@ -1,6 +1,7 @@
 import m from "mithril";
 import { afterEach, describe, expect, it } from "vitest";
 import { MarkdownEditor } from "./editor";
+import "./styles.css";
 import type { MarkdownEditorAttrs } from "./types";
 
 const roots: HTMLElement[] = [];
@@ -28,6 +29,11 @@ describe("MarkdownEditor modes", () => {
     const root = mountEditor({ content: "# Heading", mode: "markdown" });
 
     expect(root.querySelector("textarea")?.value).toBe("# Heading");
+    const overlay = root.querySelector(".md-syntax-highlight") as HTMLElement;
+    expect(overlay.textContent).toBe("# Heading");
+    expect(getComputedStyle(overlay).color).not.toBe("");
+    expect(getComputedStyle(overlay).color).not.toBe("transparent");
+
     const tabs = root.querySelectorAll<HTMLButtonElement>(".md-tab-button");
     tabs[0].click();
     m.redraw.sync();
@@ -55,6 +61,12 @@ describe("MarkdownEditor modes", () => {
     });
 
     const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+    expect(root.querySelector(".md-syntax-highlight")?.textContent).toContain(
+      "hidden image 1",
+    );
+    expect(root.querySelector(".md-syntax-highlight")?.textContent).not.toContain(
+      "AAABBBCCC",
+    );
     expect(textarea?.value).toContain("hidden image 1");
     expect(textarea?.value).not.toContain("AAABBBCCC");
 

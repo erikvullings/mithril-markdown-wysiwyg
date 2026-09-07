@@ -17,7 +17,7 @@ Architecture-improvement backlog from an `/improve-codebase-architecture` review
 Header anchors (originally feature 4) are being added upstream in `slimdown-js` instead of here —
 see instructions handed to that repo's agent, not tracked as a task in this repo.
 
-- [ ] 0007 Lightweight syntax highlighting for markdown source and code blocks
+- [x] 0007 Lightweight syntax highlighting for markdown source and code blocks
 - [ ] 0008 Markdown auto-formatting: table alignment + bullet-marker normalization
 
 ## EPUB editor improvements

@@ -138,7 +138,7 @@
   box-sizing: border-box;
   border: none;
   background-color: var(--editable-bg);
-  color: transparent;
+  color: var(--text-color);
 }
 
 .md-editable-area h1 {

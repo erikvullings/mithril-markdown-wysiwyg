@@ -1,6 +1,6 @@
 # 0007 Lightweight syntax highlighting for markdown source and code blocks
 
-Status: open
+Status: done
 Priority: medium
 Subsystem: lib
 Depends on: none
@@ -54,3 +54,12 @@ share one small hand-written regex-based tokenizer, since "highlight markdown sy
   by slimdown-js into the `class="language-ts"` attribute — no need to re-detect language.
 
 ## Agent Notes
+
+- 2026-09-07: Integrated the lightweight grammar/tokenizer and Markdown overlay from
+  `0d060d2`, preserving the EPUB branch's search, cursor mapping, and hidden-base64 projection in
+  `packages/lib/src/editor.ts`. Fixed initially blank Markdown editors by giving
+  `.md-syntax-highlight` the theme's `--text-color`; the textarea remains transparent so it owns
+  input and caret rendering. Added regression coverage in `packages/lib/src/editor.test.ts` for
+  initially-Markdown content and masked-image overlay content. The demo bundle grew from 143,299
+  bytes (42,063 gzip) to 160,208 bytes (48,637 gzip) in the source syntax-highlighting commit; the
+  integrated library ESM bundle is 172.88 kB (40.88 kB gzip).
