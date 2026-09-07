@@ -83,6 +83,12 @@ interface AppState {
     isPreview: boolean;
     renderer: "marked" | "slimdown";
   };
+  editor4: {
+    mode: "wysiwyg" | "markdown";
+    content: string;
+    theme: "light" | "dark";
+    isPreview: boolean;
+  };
 }
 
 const App = () => {
@@ -110,6 +116,13 @@ const App = () => {
       isPreview: false,
       renderer: "marked",
     },
+    editor4: {
+      mode: "markdown",
+      content:
+        "# Syntax Highlighting Demo\n\nThis editor demonstrates **syntax highlighting** in both the Markdown textarea and the rendered preview.\n\n## Markdown Syntax\n\nTry typing in **Markdown mode** to see:\n\n- `**bold**` renders as **bold**\n- `*italic*` renders as *italic*\n- `\\`inline code\\`` renders as `inline code`\n- `[links](https://example.com)` renders as [links](https://example.com)\n- `# headings` become headings\n- `> blockquotes` appear as blockquotes\n- `- list items` become bullet points\n\n## Code Blocks\n\nCode blocks are highlighted in the preview pane:\n\n### JavaScript\n\n```javascript\nconst greet = (name) => {\n  // This is a comment\n  const message = \"Hello, \" + name + \"!\";\n  console.log(message);\n  return message;\n};\n\ngreet(\"World\");\n```\n\n### Python\n\n```python\ndef fibonacci(n):\n    \"\"\"Generate Fibonacci sequence up to n terms.\"\"\"\n    sequence = [0, 1]\n    for _ in range(2, n):\n        sequence.append(sequence[-1] + sequence[-2])\n    return sequence[:n]\n\nprint(fibonacci(10))\n```\n\n### CSS\n\n```css\n.card {\n  border: 1px solid #e2e8f0;\n  border-radius: 0.5rem;\n  padding: 1.5rem;\n  background: linear-gradient(to bottom, #ffffff, #f8fafc);\n}\n\n.card:hover {\n  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);\n}\n```\n\n### JSON\n\n```json\n{\n  \"name\": \"mithril-markdown-wysiwyg\",\n  \"version\": \"0.2.5\",\n  \"description\": \"A WYSIWYG markdown editor\",\n  \"dependencies\": {\n    \"mithril\": \"^2.2.0\",\n    \"slimdown-js\": \"^0.1.0\"\n  }\n}\n```\n\nToggle the **Preview** tab to see code blocks with syntax highlighting.",
+      theme: "light",
+      isPreview: false,
+    },
   };
 
   const updateEditor1 = (updates: Partial<typeof state.editor1>) => {
@@ -127,11 +140,17 @@ const App = () => {
     m.redraw();
   };
 
+  const updateEditor4 = (updates: Partial<typeof state.editor4>) => {
+    state.editor4 = { ...state.editor4, ...updates };
+    m.redraw();
+  };
+
   const toggleTheme = () => {
     const newTheme = state.editor1.theme === "light" ? "dark" : "light";
     updateEditor1({ theme: newTheme });
     updateEditor2({ theme: newTheme });
     updateEditor3({ theme: newTheme });
+    updateEditor4({ theme: newTheme });
     document.body.className = newTheme === "dark" ? "dark-theme" : "";
   };
 
@@ -236,6 +255,29 @@ const App = () => {
             },
             onModeChange: (mode: "wysiwyg" | "markdown") => {
               updateEditor3({ mode });
+            },
+          } as MarkdownEditorAttrs),
+        ]),
+
+        m("div.demo-section", [
+          m("h2", "Syntax Highlighting Demo (Markdown mode + Preview)"),
+          m(
+            "p",
+            "This editor shows syntax highlighting in the Markdown textarea and code blocks in the preview. Switch to **Preview** to see highlighted code blocks.",
+          ),
+          m(MarkdownEditor, {
+            mode: state.editor4.mode,
+            content: state.editor4.content,
+            theme: state.editor4.theme,
+            isPreview: state.editor4.isPreview,
+            toolbar: true,
+            showTabs: true,
+            placeholder: "Write your markdown here...",
+            onContentChange: (content: string) => {
+              updateEditor4({ content });
+            },
+            onModeChange: (mode: "wysiwyg" | "markdown") => {
+              updateEditor4({ mode });
             },
           } as MarkdownEditorAttrs),
         ]),

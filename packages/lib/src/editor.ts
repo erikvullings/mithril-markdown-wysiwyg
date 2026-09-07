@@ -1,7 +1,6 @@
 import m, { type FactoryComponent } from "mithril";
 import { MarkdownEditorAttrs, ToolbarButton } from "./types";
 import {
-  toolbarButtonGroups,
   createI18nToolbarConfig,
   headingOptions,
   isDropdownButton,
@@ -20,6 +19,9 @@ import * as DOMUtils from "./utils/dom-commands";
 import { markdownToWysiwygHtml } from "./utils/markdown-to-html";
 import { createCursorPositionStore } from "./utils/cursor-position-store";
 import { createI18n } from "./i18n";
+import { highlightMarkdown } from "./utils/syntax-highlighter";
+import { highlightCodeBlocks } from "./utils/syntax-highlighter";
+import { markdownGrammar } from "./utils/markdown-grammar";
 
 export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let wysiwygContent = "";
@@ -30,6 +32,16 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   // Scoped to this editor instance, so multiple editors on one page don't
   // clobber each other's saved cursor/scroll position.
   const cursorPositionStore = createCursorPositionStore();
+
+  // Syntax-highlight overlay elements (markdown textarea mode)
+  let highlightPre: HTMLElement | null = null;
+  let markdownTextarea: HTMLTextAreaElement | null = null;
+
+  // Update the syntax-highlight overlay with the latest markdown content
+  const updateHighlightOverlay = (content: string): void => {
+    if (!highlightPre) return;
+    highlightPre.innerHTML = highlightMarkdown(content, markdownGrammar);
+  };
 
   // Helper function to safely render markdown with empty content check
   const safeMarkdownToHtml = (
@@ -191,7 +203,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
       const handleLinkInsert = async (
         url: string,
         text: string,
-        title?: string,
+        _title?: string,
       ) => {
         if (editorActions) {
           // Restore cursor position before insertion
@@ -397,36 +409,52 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                   ".md-markdown-editor-container",
                   {
                     key: "markdown-editor",
-                    style: { display: "flex" },
                   },
-                  m("textarea.md-markdown-area[name=markdown-area]", {
-                    placeholder,
-                    value: markdownContent,
-                    oninput: (e: Event) => {
-                      const target = e.target as HTMLTextAreaElement;
-                      handleContentChange(target.value, "markdown");
-                    },
-                    onkeydown: (e: Event) => {
-                      const target = e.target as HTMLTextAreaElement;
-                      editorActions?.handleKeyDown(e);
-                      // Force the view to catch up with the DOM mutation
-                      // handleKeyDown may have just made (e.g. continuing a
-                      // list on Enter) within this same tick, rather than
-                      // waiting for Mithril's usual rAF-deferred redraw.
-                      // Without this, a later redraw can momentarily diff
-                      // against stale state and disturb focus/selection,
-                      // leaving the textarea looking like it needs a click
-                      // before typing continues.
-                      m.redraw.sync();
-                      target.focus();
-                    },
-                    onpaste: (e: Event) => editorActions?.handlePaste(e),
-                    oncreate: (vnode: m.VnodeDOM) => {
-                      editorActions?.setTextarea(
-                        vnode.dom as HTMLTextAreaElement,
-                      );
-                    },
-                  }),
+                  [
+                    m("pre.md-syntax-highlight", {
+                      oncreate: (vnode: m.VnodeDOM) => {
+                        highlightPre = vnode.dom as HTMLElement;
+                        updateHighlightOverlay(markdownContent);
+                      },
+                      onupdate: () => {
+                        updateHighlightOverlay(markdownContent);
+                      },
+                    }),
+                    m("textarea.md-markdown-area[name=markdown-area]", {
+                      placeholder,
+                      value: markdownContent,
+                      oninput: (e: Event) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        handleContentChange(target.value, "markdown");
+                      },
+                      onkeydown: (e: Event) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        editorActions?.handleKeyDown(e);
+                        // Force the view to catch up with the DOM mutation
+                        // handleKeyDown may have just made (e.g. continuing a
+                        // list on Enter) within this same tick, rather than
+                        // waiting for Mithril's usual rAF-deferred redraw.
+                        // Without this, a later redraw can momentarily diff
+                        // against stale state and disturb focus/selection,
+                        // leaving the textarea looking like it needs a click
+                        // before typing continues.
+                        m.redraw.sync();
+                        target.focus();
+                      },
+                      onpaste: (e: Event) => editorActions?.handlePaste(e),
+                      oncreate: (vnode: m.VnodeDOM) => {
+                        const textareaEl = vnode.dom as HTMLTextAreaElement;
+                        editorActions?.setTextarea(textareaEl);
+                        markdownTextarea = textareaEl;
+                      },
+                      onscroll: () => {
+                        if (highlightPre && markdownTextarea) {
+                          highlightPre.scrollTop = markdownTextarea.scrollTop;
+                          highlightPre.scrollLeft = markdownTextarea.scrollLeft;
+                        }
+                      },
+                    }),
+                  ],
                 )
               : m("div.md-editable-area", {
                   key: "wysiwyg-editor",
@@ -527,7 +555,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
             m(".editor-preview", {
               innerHTML:
                 currentMode === "markdown"
-                  ? safeMarkdownToHtml(markdownContent, markdownToHtml)
+                  ? highlightCodeBlocks(
+                      safeMarkdownToHtml(markdownContent, markdownToHtml),
+                    )
                   : wysiwygContent,
             }),
 

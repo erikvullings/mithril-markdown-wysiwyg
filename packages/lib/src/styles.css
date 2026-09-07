@@ -237,13 +237,12 @@
 }
 
 .md-markdown-editor-container {
-  display: flex;
+  position: relative;
   height: 100%;
+  width: 100%;
   background-color: #fff;
   color: #333;
   font-family: 'Menlo', 'Consolas', monospace;
-  display: none;
-  width: 100%;
   box-sizing: border-box;
 }
 
@@ -266,17 +265,30 @@
 }
 
 .md-markdown-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 100%;
   width: 100%;
   padding: 15px;
   border: none;
   outline: none;
   resize: none;
-  background-color: var(--bg-color, transparent);
-  color: var(--text-color, inherit);
+  background-color: transparent;
+  color: transparent;
+  text-fill-color: transparent;
+  caret-color: var(--text-color, #333);
   font-family: inherit;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 15px;
+  line-height: 1.7;
   box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .md-tabs {
@@ -719,4 +731,153 @@
 .md-wysiwyg-editor-wrapper[data-theme='dark'] .dropdown-menu-item:focus,
 .md-wysiwyg-editor-wrapper[data-theme='dark'] .dropdown-menu-item.selected {
   background-color: var(--button-hover);
+}
+
+/* ── Syntax highlighting colours ──────────────────────────────────────────── */
+
+/* Markdown tokens stay subdued: they mark structure, not full content. */
+[data-theme='light'] .md-syn-heading,
+[data-theme='light'] .md-syn-bold,
+[data-theme='light'] .md-syn-italic,
+[data-theme='light'] .md-syn-code,
+[data-theme='light'] .md-syn-code-block,
+[data-theme='light'] .md-syn-link,
+[data-theme='light'] .md-syn-image,
+[data-theme='light'] .md-syn-blockquote,
+[data-theme='light'] .md-syn-list {
+  color: #6e7781;
+}
+
+[data-theme='dark'] .md-syn-heading,
+[data-theme='dark'] .md-syn-bold,
+[data-theme='dark'] .md-syn-italic,
+[data-theme='dark'] .md-syn-code,
+[data-theme='dark'] .md-syn-code-block,
+[data-theme='dark'] .md-syn-link,
+[data-theme='dark'] .md-syn-image,
+[data-theme='dark'] .md-syn-blockquote,
+[data-theme='dark'] .md-syn-list {
+  color: #8b949e;
+}
+
+[data-theme='light'] .md-syn-heading,
+[data-theme='dark'] .md-syn-heading,
+[data-theme='light'] .md-syn-list,
+[data-theme='dark'] .md-syn-list {
+  font-weight: 600;
+}
+
+[data-theme='light'] .md-syn-bold,
+[data-theme='dark'] .md-syn-bold {
+  font-weight: 700;
+}
+
+[data-theme='light'] .md-syn-italic,
+[data-theme='dark'] .md-syn-italic,
+[data-theme='light'] .md-syn-blockquote,
+[data-theme='dark'] .md-syn-blockquote {
+  font-style: italic;
+}
+
+[data-theme='light'] .md-syn-code,
+[data-theme='dark'] .md-syn-code,
+[data-theme='light'] .md-syn-code-block,
+[data-theme='dark'] .md-syn-code-block {
+  background-color: rgba(175, 184, 193, 0.14);
+  border-radius: 3px;
+  padding: 0.05em 0.18em;
+}
+
+[data-theme='light'] .md-syn-link,
+[data-theme='dark'] .md-syn-link,
+[data-theme='light'] .md-syn-image,
+[data-theme='dark'] .md-syn-image {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+/* Code-highlight tokens (both themes) */
+[data-theme='light'] .md-syn-keyword {
+  color: #5b6570;
+  font-weight: 600;
+}
+[data-theme='dark'] .md-syn-keyword {
+  color: #c9d1d9;
+  font-weight: 600;
+}
+[data-theme='light'] .md-syn-string {
+  color: #8a4b2a;
+}
+[data-theme='dark'] .md-syn-string {
+  color: #d2a8ff;
+}
+[data-theme='light'] .md-syn-comment {
+  color: #6e7781;
+  font-style: italic;
+}
+[data-theme='dark'] .md-syn-comment {
+  color: #8b949e;
+  font-style: italic;
+}
+[data-theme='light'] .md-syn-number {
+  color: #57606a;
+}
+[data-theme='dark'] .md-syn-number {
+  color: #a5d6ff;
+}
+[data-theme='light'] .md-syn-operator {
+  color: #57606a;
+}
+[data-theme='dark'] .md-syn-operator {
+  color: #8b949e;
+}
+[data-theme='light'] .md-syn-constant {
+  color: #57606a;
+}
+[data-theme='dark'] .md-syn-constant {
+  color: #a5d6ff;
+}
+[data-theme='light'] .md-syn-function {
+  color: #5b6570;
+}
+[data-theme='dark'] .md-syn-function {
+  color: #c9d1d9;
+}
+[data-theme='light'] .md-syn-selector,
+[data-theme='light'] .md-syn-property {
+  color: #5b6570;
+}
+[data-theme='dark'] .md-syn-selector,
+[data-theme='dark'] .md-syn-property {
+  color: #c9d1d9;
+}
+[data-theme='light'] .md-syn-regex {
+  color: #8a4b2a;
+}
+[data-theme='dark'] .md-syn-regex {
+  color: #d2a8ff;
+}
+
+/* Textarea overlay */
+.md-syntax-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 15px;
+  margin: 0;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden;
+  pointer-events: none;
+  color: transparent;
+  z-index: 1;
+}
+
+.md-markdown-area {
+  z-index: 2;
 }
