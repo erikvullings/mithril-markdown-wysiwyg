@@ -3,4 +3,4 @@ packages:
 allowBuilds:
   esbuild: set this to true or false
 minimumReleaseAgeExclude:
-  - slimdown-js@1.5.0 || 1.5.1 || 1.5.2
+  - slimdown-js@1.5.0 || 1.5.1 || 1.5.2 || 1.5.3
