@@ -63,3 +63,12 @@ share one small hand-written regex-based tokenizer, since "highlight markdown sy
   initially-Markdown content and masked-image overlay content. The demo bundle grew from 143,299
   bytes (42,063 gzip) to 160,208 bytes (48,637 gzip) in the source syntax-highlighting commit; the
   integrated library ESM bundle is 172.88 kB (40.88 kB gzip).
+- 2026-09-07: Reopened after live use showed that Markdown highlighting covered only delimiter
+  characters such as backticks. Improving the grammar to style complete Markdown constructs and
+  apply language-aware tokenization inside fenced source blocks.
+- 2026-09-07: Completed the highlighting improvement in
+  `packages/lib/src/utils/markdown-grammar.ts` and `syntax-highlighter.ts`. Inline code, emphasis,
+  links, images, headings, blockquotes, and lists now tokenize complete constructs; fenced
+  JavaScript/TypeScript, Python, JSON, Bash, and CSS source uses its language grammar. Styling
+  remains metric-neutral so the overlay stays aligned with the textarea. Added regressions for
+  complete spans, tilde fences, invalid backtick info strings, and exact backtick-run matching.

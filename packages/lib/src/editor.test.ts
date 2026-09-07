@@ -33,6 +33,11 @@ describe("MarkdownEditor modes", () => {
     expect(overlay.textContent).toBe("# Heading");
     expect(getComputedStyle(overlay).color).not.toBe("");
     expect(getComputedStyle(overlay).color).not.toBe("transparent");
+    const heading = overlay.querySelector(".md-syn-heading") as HTMLElement;
+    const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+    expect(getComputedStyle(heading).fontWeight).toBe(
+      getComputedStyle(textarea).fontWeight,
+    );
 
     const tabs = root.querySelectorAll<HTMLButtonElement>(".md-tab-button");
     tabs[0].click();

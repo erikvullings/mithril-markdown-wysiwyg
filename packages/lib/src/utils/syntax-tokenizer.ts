@@ -17,6 +17,7 @@ export interface Token {
 export interface GrammarRule {
   type: string;
   pattern: RegExp;
+  lineStart?: boolean;
 }
 
 /**
@@ -47,6 +48,7 @@ export const tokenize = (
     let bestMatch: { type: string; length: number } | null = null;
 
     for (const rule of grammar) {
+      if (rule.lineStart && pos > 0 && text[pos - 1] !== "\n") continue;
       const match = rule.pattern.exec(text.slice(pos));
       if (match && (!bestMatch || match[0].length > bestMatch.length)) {
         bestMatch = { type: rule.type, length: match[0].length };

@@ -15,6 +15,23 @@ import { getGrammarForLanguage } from "./code-grammar";
 
 // ── Markdown highlighting ──────────────────────────────────────────────────
 
+const fencedCodeStart = /^( {0,3})(`{3,}|~{3,})([^\r\n]*)(\r?\n|$)/gm;
+
+const renderMarkdownTokens = (
+  text: string,
+  grammar: GrammarRule[],
+): string => renderToHTML(tokenize(text, grammar));
+
+const renderFenceLine = (line: string): string => {
+  const newline = line.endsWith("\r\n")
+    ? "\r\n"
+    : line.endsWith("\n")
+      ? "\n"
+      : "";
+  const content = newline ? line.slice(0, -newline.length) : line;
+  return `<span class="md-syn-code-block">${escapeHTML(content)}</span>${newline}`;
+};
+
 /**
  * Highlight a Markdown string and return HTML with `<span>` tokens.
  *
@@ -27,8 +44,49 @@ export const highlightMarkdown = (
   grammar: GrammarRule[] = markdownGrammar,
 ): string => {
   if (!text) return "";
-  const tokens = tokenize(text, grammar);
-  return renderToHTML(tokens);
+
+  let html = "";
+  let cursor = 0;
+  fencedCodeStart.lastIndex = 0;
+
+  for (
+    let opening = fencedCodeStart.exec(text);
+    opening;
+    opening = fencedCodeStart.exec(text)
+  ) {
+    if (opening.index < cursor) continue;
+    if (opening[2][0] === "`" && opening[3].includes("`")) continue;
+
+    html += renderMarkdownTokens(text.slice(cursor, opening.index), grammar);
+    html += renderFenceLine(opening[0]);
+
+    const fenceCharacter = opening[2][0];
+    const closingFence = new RegExp(
+      `^ {0,3}\\${fenceCharacter}{${opening[2].length},}[ \\t]*(?:\\r?\\n|$)`,
+      "gm",
+    );
+    closingFence.lastIndex = fencedCodeStart.lastIndex;
+    const closing = closingFence.exec(text);
+    const codeEnd = closing?.index ?? text.length;
+    const language = opening[3].trim().split(/\s+/, 1)[0];
+    html += renderToHTML(
+      tokenize(
+        text.slice(fencedCodeStart.lastIndex, codeEnd),
+        getGrammarForLanguage(language),
+      ),
+    );
+
+    if (!closing) {
+      cursor = text.length;
+      break;
+    }
+
+    html += renderFenceLine(closing[0]);
+    cursor = closingFence.lastIndex;
+    fencedCodeStart.lastIndex = cursor;
+  }
+
+  return html + renderMarkdownTokens(text.slice(cursor), grammar);
 };
 
 // ── Code-block highlighting ────────────────────────────────────────────────

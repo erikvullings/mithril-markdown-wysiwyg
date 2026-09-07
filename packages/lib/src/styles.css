@@ -889,32 +889,12 @@
   color: #8b949e;
 }
 
-[data-theme='light'] .md-syn-heading,
-[data-theme='dark'] .md-syn-heading,
-[data-theme='light'] .md-syn-list,
-[data-theme='dark'] .md-syn-list {
-  font-weight: 600;
-}
-
-[data-theme='light'] .md-syn-bold,
-[data-theme='dark'] .md-syn-bold {
-  font-weight: 700;
-}
-
-[data-theme='light'] .md-syn-italic,
-[data-theme='dark'] .md-syn-italic,
-[data-theme='light'] .md-syn-blockquote,
-[data-theme='dark'] .md-syn-blockquote {
-  font-style: italic;
-}
-
 [data-theme='light'] .md-syn-code,
 [data-theme='dark'] .md-syn-code,
 [data-theme='light'] .md-syn-code-block,
 [data-theme='dark'] .md-syn-code-block {
   background-color: rgba(175, 184, 193, 0.14);
   border-radius: 3px;
-  padding: 0.05em 0.18em;
 }
 
 [data-theme='light'] .md-syn-link,
