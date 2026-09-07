@@ -10,52 +10,53 @@
 import type { GrammarRule } from "./syntax-tokenizer";
 
 export const markdownGrammar: GrammarRule[] = [
-  // --- Fenced code blocks (highest priority — must come first) ---
+  // --- Fenced code block line ---
   {
     type: "code-block",
-    pattern: /^```[^\n]*/,
+    pattern: /^(?:`{3,}[^`\r\n]*|~{3,}[^\r\n]*)/,
+    lineStart: true,
   },
-  // --- Inline code delimiter ---
+  // --- Inline code ---
   {
     type: "code",
-    pattern: /^`(?!`)/,
+    pattern: /^(`+)(?!`)([^\r\n]*?)(?<!`)\1(?!`)/,
   },
-  // --- Headings marker ---
+  // --- Headings ---
   {
     type: "heading",
-    pattern: /^(#{1,6})(?=\s)/,
+    pattern: /^#{1,6}[ \t]+[^\r\n]*/,
+    lineStart: true,
   },
-  // --- Bold / italic delimiters ---
+  // --- Bold / italic spans ---
   {
     type: "bold",
-    pattern: /^(?:\*\*|__)/u,
+    pattern:
+      /^(?:\*\*(?=\S)(?:[^*\r\n]|\*(?!\*))*?\S\*\*|__(?=\S)(?:[^_\r\n]|_(?!_))*?\S__)/u,
   },
   {
     type: "italic",
-    pattern: /^(?:\*(?!\*)|_(?!_))/u,
+    pattern:
+      /^(?:\*(?=\S)(?:[^*\r\n])*?\S\*|_(?=\S)(?:[^_\r\n])*?\S_)/u,
   },
-  // --- Images / links opening delimiters ---
+  // --- Images / links ---
   {
     type: "image",
-    pattern: /^!\[/,
+    pattern: /^!\[[^\]\r\n]*\]\([^\)\r\n]*\)/,
   },
   {
     type: "link",
-    pattern: /^\[/,
+    pattern: /^\[[^\]\r\n]*\]\([^\)\r\n]*\)/,
   },
-  // --- Blockquote marker ---
+  // --- Blockquotes ---
   {
     type: "blockquote",
-    pattern: /^>\s*/m,
+    pattern: /^>[ \t]?[^\r\n]*/,
+    lineStart: true,
   },
-  // --- Unordered list marker ---
+  // --- Lists ---
   {
     type: "list",
-    pattern: /^(\s*[-*+]\s+)/,
-  },
-  // --- Ordered list marker ---
-  {
-    type: "list",
-    pattern: /^(\s*\d+\.\s+)/,
+    pattern: /^[ \t]{0,3}(?:[-*+]|\d+[.)])[ \t]+[^\r\n]*/,
+    lineStart: true,
   },
 ];

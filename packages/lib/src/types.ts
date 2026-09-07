@@ -10,7 +10,7 @@ export type EditorMode = "wysiwyg" | "markdown";
  * - "light": Light theme with bright background
  * - "dark": Dark theme with dark background
  */
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "auto";
 
 import type { I18nStrings } from "./i18n";
 
@@ -28,6 +28,12 @@ export interface MarkdownEditorAttrs {
    * Theme for the editor. Defaults to "light".
    */
   theme?: ThemeMode;
+
+  /**
+   * Replace inline base64 image data with compact placeholders in Markdown
+   * mode. The original data remains intact in content and WYSIWYG output.
+   */
+  hideBase64Images?: boolean;
 
   /**
    * Whether to show the formatting toolbar. Defaults to true.

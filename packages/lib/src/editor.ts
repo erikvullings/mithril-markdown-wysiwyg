@@ -19,8 +19,25 @@ import * as DOMUtils from "./utils/dom-commands";
 import { markdownToWysiwygHtml } from "./utils/markdown-to-html";
 import { createCursorPositionStore } from "./utils/cursor-position-store";
 import { createI18n } from "./i18n";
-import { highlightMarkdown } from "./utils/syntax-highlighter";
-import { highlightCodeBlocks } from "./utils/syntax-highlighter";
+import {
+  applyMaskedMarkdownEdit,
+  displayIndexToSourceIndex,
+  expandPageBreakMarkers,
+  findTextMatches,
+  maskBase64Images,
+  replaceTextRange,
+  searchableDomText,
+  selectTextRange,
+  sourceIndexToDisplayIndex,
+  textOffsetWithin,
+  type HiddenBase64Image,
+  type SearchMatch,
+  type SearchOptions,
+} from "./utils/editor-content";
+import {
+  highlightCodeBlocks,
+  highlightMarkdown,
+} from "./utils/syntax-highlighter";
 import { markdownGrammar } from "./utils/markdown-grammar";
 
 export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
@@ -29,6 +46,22 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let initialized = false;
   let editorActions: EditorActions | null = null;
   let internalMode: "wysiwyg" | "markdown" | null = null;
+  let editorRoot: HTMLElement | null = null;
+  let pendingTextOffset: number | null = null;
+  let pendingMarkdownIndex: number | null = null;
+  let activeHiddenImages: HiddenBase64Image[] = [];
+  let activeMaskedDisplay = "";
+  let activeMarkdownSource = "";
+  let showSearch = false;
+  let showReplace = false;
+  let searchQuery = "";
+  let replacement = "";
+  let activeMatch = -1;
+  let searchOptions: SearchOptions = {
+    caseSensitive: false,
+    wholeWord: false,
+    regex: false,
+  };
   // Scoped to this editor instance, so multiple editors on one page don't
   // clobber each other's saved cursor/scroll position.
   const cursorPositionStore = createCursorPositionStore();
@@ -51,9 +84,107 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
     if (!markdown || markdown.trim() === "") {
       return "";
     }
+    const expandedMarkdown = expandPageBreakMarkers(markdown);
     return markdownToHtml
-      ? markdownToHtml(markdown)
-      : markdownToWysiwygHtml(markdown);
+      ? markdownToHtml(expandedMarkdown)
+      : markdownToWysiwygHtml(expandedMarkdown);
+  };
+
+  const htmlText = (html: string): string => {
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    return searchableDomText(container);
+  };
+
+  const markdownTextOffset = (
+    markdown: string,
+    index: number,
+    markdownToHtml?: (markdown: string) => string,
+  ): number => {
+    const marker = "\uE000";
+    const maxDistance = Math.min(markdown.length, 128);
+    for (let distance = 0; distance <= maxDistance; distance++) {
+      const candidates =
+        distance === 0 ? [index] : [index - distance, index + distance];
+      for (const candidate of candidates) {
+        if (candidate < 0 || candidate > markdown.length) continue;
+        const text = htmlText(
+          safeMarkdownToHtml(
+            markdown.slice(0, candidate) +
+              marker +
+              markdown.slice(candidate),
+            markdownToHtml,
+          ),
+        );
+        const markerOffset = text.indexOf(marker);
+        if (markerOffset >= 0) return markerOffset;
+      }
+    }
+
+    const fullTextLength = htmlText(
+      safeMarkdownToHtml(markdown, markdownToHtml),
+    ).length;
+    return markdown.length
+      ? Math.round((index / markdown.length) * fullTextLength)
+      : 0;
+  };
+
+  const markdownIndexForDomSelection = (
+    markdown: string,
+    root: HTMLElement,
+    range: Range,
+    markdownToHtml?: (markdown: string) => string,
+  ): number => {
+    const targetOffset = textOffsetWithin(
+      root,
+      range.startContainer,
+      range.startOffset,
+    );
+    if (range.startContainer.nodeType === Node.TEXT_NODE) {
+      const text = range.startContainer.textContent ?? "";
+      const candidates: number[] = [];
+      let candidate = markdown.indexOf(text);
+      while (candidate >= 0) {
+        candidates.push(candidate + range.startOffset);
+        candidate = markdown.indexOf(text, candidate + 1);
+      }
+      if (candidates.length) {
+        const closest = candidates.reduce((best, current) =>
+          Math.abs(
+            markdownTextOffset(markdown, current, markdownToHtml) -
+              targetOffset,
+          ) <
+          Math.abs(
+            markdownTextOffset(markdown, best, markdownToHtml) - targetOffset,
+          )
+            ? current
+            : best,
+        );
+        const parent = range.startContainer.parentElement;
+        if (parent?.closest("a") && range.startOffset === text.length) {
+          const linkTargetStart = markdown.indexOf("](", closest);
+          const linkEnd =
+            linkTargetStart >= 0 ? markdown.indexOf(")", linkTargetStart) : -1;
+          if (linkEnd >= 0) return linkEnd + 1;
+        }
+        return closest;
+      }
+    }
+
+    const candidates = [0, markdown.length];
+    for (let index = 0; index < markdown.length; index++) {
+      if (markdown[index] === "\n") {
+        candidates.push(index, index + 1);
+      }
+    }
+    return candidates.reduce((best, current) =>
+      Math.abs(
+        markdownTextOffset(markdown, current, markdownToHtml) - targetOffset,
+      ) <
+      Math.abs(markdownTextOffset(markdown, best, markdownToHtml) - targetOffset)
+        ? current
+        : best,
+    );
   };
 
   // Modal states
@@ -89,14 +220,12 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         onContentChange,
         onModeChange,
         i18n,
+        hideBase64Images = false,
       } = attrs;
 
       // Initialize mode and content on first render
       if (!initialized) {
-        // Set initial internal mode if onModeChange is not provided
-        if (!onModeChange) {
-          internalMode = mode;
-        }
+        internalMode = mode;
 
         if (detectContentType(content) === "html") {
           // Content is HTML
@@ -114,6 +243,12 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
       // Determine the current mode - use internal mode if onModeChange is not provided
       const currentMode = onModeChange ? mode : internalMode || mode;
+      const maskedMarkdown = hideBase64Images
+        ? maskBase64Images(markdownContent)
+        : { display: markdownContent, hiddenImages: [] as HiddenBase64Image[] };
+      activeHiddenImages = maskedMarkdown.hiddenImages;
+      activeMaskedDisplay = maskedMarkdown.display;
+      activeMarkdownSource = markdownContent;
 
       // Create i18n function and toolbar configuration
       const t = createI18n(i18n);
@@ -148,7 +283,18 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         // edit getting treated as WYSIWYG HTML, corrupting the textarea's
         // value and resetting the cursor to the end).
         editorActions = new EditorActions((newContent: string) => {
-          handleContentChange(newContent, editorActions!.getMode());
+          const actionMode = editorActions!.getMode();
+          handleContentChange(
+            actionMode === "markdown"
+              ? applyMaskedMarkdownEdit(
+                  activeMarkdownSource,
+                  activeMaskedDisplay,
+                  newContent,
+                  activeHiddenImages,
+                )
+              : newContent,
+            actionMode,
+          );
         });
         editorActions.initHistory(wysiwygContent);
       }
@@ -156,6 +302,38 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
       const handleModeChange = (newMode: "wysiwyg" | "markdown") => {
         if (newMode !== currentMode) {
+          if (currentMode === "markdown") {
+            const textarea = editorActions?.getTextarea();
+            if (textarea) {
+              const sourceIndex = displayIndexToSourceIndex(
+                maskedMarkdown.display,
+                textarea.selectionStart,
+                maskedMarkdown.hiddenImages,
+              );
+              pendingTextOffset = markdownTextOffset(
+                markdownContent,
+                sourceIndex,
+                markdownToHtml,
+              );
+            }
+          } else {
+            const contentEditable = editorActions?.getContentEditable();
+            const selection = document.getSelection();
+            if (
+              contentEditable &&
+              selection?.rangeCount &&
+              contentEditable.contains(selection.anchorNode)
+            ) {
+              const range = selection.getRangeAt(0);
+              pendingMarkdownIndex = markdownIndexForDomSelection(
+                markdownContent,
+                contentEditable,
+                range,
+                markdownToHtml,
+              );
+            }
+          }
+
           // Convert content when switching modes
           if (newMode === "markdown" && currentMode === "wysiwyg") {
             // Switching from WYSIWYG to markdown - convert HTML to markdown
@@ -181,6 +359,134 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
           editorActions?.setMode(newMode);
           onModeChange?.(newMode);
         }
+      };
+
+      const getSearchText = (): string => {
+        if (currentMode === "markdown") return maskedMarkdown.display;
+        const contentEditable = editorActions?.getContentEditable();
+        return contentEditable ? searchableDomText(contentEditable) : "";
+      };
+
+      const searchResult = findTextMatches(
+        getSearchText(),
+        searchQuery,
+        searchOptions,
+      );
+      const matches = searchResult.matches;
+      if (activeMatch >= matches.length) {
+        activeMatch = matches.length ? matches.length - 1 : -1;
+      }
+
+      const selectMatch = (match: SearchMatch): void => {
+        if (currentMode === "markdown") {
+          const textarea = editorActions?.getTextarea();
+          if (!textarea) return;
+          textarea.focus();
+          textarea.setSelectionRange(match.start, match.end);
+          const lineHeight =
+            parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+          const line = textarea.value.slice(0, match.start).split("\n").length;
+          textarea.scrollTop = Math.max(0, (line - 2) * lineHeight);
+          return;
+        }
+        const contentEditable = editorActions?.getContentEditable();
+        if (contentEditable) {
+          selectTextRange(contentEditable, match.start, match.end);
+        }
+      };
+
+      const moveToMatch = (direction: 1 | -1): void => {
+        if (!matches.length) {
+          activeMatch = -1;
+          return;
+        }
+        activeMatch =
+          (activeMatch + direction + matches.length) % matches.length;
+        selectMatch(matches[activeMatch]);
+      };
+
+      const notifyMarkdownDisplayChange = (
+        display: string,
+      ): void => {
+        handleContentChange(
+          applyMaskedMarkdownEdit(
+            markdownContent,
+            maskedMarkdown.display,
+            display,
+            maskedMarkdown.hiddenImages,
+          ),
+          "markdown",
+        );
+      };
+
+      const replaceMatches = (replaceAll: boolean): void => {
+        if (!matches.length) return;
+        const selectedMatches = replaceAll
+          ? [...matches].reverse()
+          : [matches[Math.max(activeMatch, 0)]];
+
+        if (currentMode === "markdown") {
+          let display = maskedMarkdown.display;
+          for (const match of selectedMatches) {
+            display =
+              display.slice(0, match.start) +
+              replacement +
+              display.slice(match.end);
+          }
+          notifyMarkdownDisplayChange(display);
+          const textarea = editorActions?.getTextarea();
+          if (textarea) textarea.value = display;
+        } else {
+          const contentEditable = editorActions?.getContentEditable();
+          if (!contentEditable) return;
+          for (const match of selectedMatches) {
+            replaceTextRange(contentEditable, match, replacement);
+          }
+          handleContentChange(contentEditable.innerHTML, "wysiwyg");
+        }
+        activeMatch = -1;
+      };
+
+      const openSearch = (withReplace: boolean): void => {
+        if (showSearch && showReplace === withReplace) {
+          showSearch = false;
+          showReplace = false;
+          return;
+        }
+        showSearch = true;
+        showReplace = withReplace;
+        m.redraw.sync();
+        setTimeout(() => {
+          const input = editorRoot?.querySelector<HTMLInputElement>(
+            ".md-search-input",
+          );
+          input?.focus();
+          input?.select();
+        });
+      };
+
+      const handleEditorKeyDown = (event: Event): boolean => {
+        const keyboardEvent = event as KeyboardEvent;
+        const modifier = keyboardEvent.metaKey || keyboardEvent.ctrlKey;
+        if (modifier && keyboardEvent.key.toLowerCase() === "f") {
+          keyboardEvent.preventDefault();
+          keyboardEvent.stopPropagation();
+          openSearch(false);
+          return true;
+        }
+        if (modifier && keyboardEvent.key.toLowerCase() === "h") {
+          keyboardEvent.preventDefault();
+          keyboardEvent.stopPropagation();
+          openSearch(true);
+          return true;
+        }
+        if (keyboardEvent.key === "Escape" && showSearch) {
+          keyboardEvent.preventDefault();
+          showSearch = false;
+          showReplace = false;
+          return true;
+        }
+        return false;
       };
 
       editorActions.setOnToggleMode(() =>
@@ -354,6 +660,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         ".md-wysiwyg-editor-wrapper",
         {
           "data-theme": theme,
+          oncreate: (vnode: m.VnodeDOM) => {
+            editorRoot = vnode.dom as HTMLElement;
+          },
         },
         [
           toolbar &&
@@ -404,6 +713,177 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                 .filter(Boolean),
             ]),
           m(".md-editor-content-area", [
+            showSearch &&
+              m(
+                ".md-search-panel",
+                {
+                  key: "search-panel",
+                  onkeydown: (event: Event) => {
+                    const keyboardEvent = event as KeyboardEvent;
+                    const modifier =
+                      keyboardEvent.metaKey || keyboardEvent.ctrlKey;
+                    if (
+                      modifier &&
+                      ["f", "h"].includes(keyboardEvent.key.toLowerCase())
+                    ) {
+                      keyboardEvent.preventDefault();
+                      keyboardEvent.stopPropagation();
+                      openSearch(keyboardEvent.key.toLowerCase() === "h");
+                    } else if (keyboardEvent.key === "Escape") {
+                      keyboardEvent.preventDefault();
+                      showSearch = false;
+                      showReplace = false;
+                    } else if (keyboardEvent.key === "Enter") {
+                      keyboardEvent.preventDefault();
+                      moveToMatch(keyboardEvent.shiftKey ? -1 : 1);
+                    }
+                  },
+                },
+                [
+                  m(".md-search-row", [
+                    m("input.md-search-input", {
+                      type: "text",
+                      value: searchQuery,
+                      placeholder: t("find"),
+                      "aria-label": t("find"),
+                      oninput: (event: Event) => {
+                        searchQuery = (event.target as HTMLInputElement).value;
+                        activeMatch = -1;
+                      },
+                    }),
+                    m(
+                      "span.md-search-count",
+                      searchResult.error
+                        ? t("invalidExpression")
+                        : matches.length
+                          ? `${Math.max(activeMatch + 1, 1)} of ${matches.length}`
+                          : t("noResults"),
+                    ),
+                    [
+                      {
+                        label: t("matchCase"),
+                        text: "Aa",
+                        key: "caseSensitive" as const,
+                      },
+                      {
+                        label: t("matchWholeWord"),
+                        text: "ab",
+                        key: "wholeWord" as const,
+                      },
+                      {
+                        label: t("useRegularExpression"),
+                        text: ".*",
+                        key: "regex" as const,
+                      },
+                    ].map((option) =>
+                      m(
+                        "button.md-search-option",
+                        {
+                          type: "button",
+                          class: searchOptions[option.key] ? "active" : "",
+                          title: option.label,
+                          "aria-label": option.label,
+                          "aria-pressed": searchOptions[option.key]
+                            ? "true"
+                            : "false",
+                          onclick: () => {
+                            searchOptions = {
+                              ...searchOptions,
+                              [option.key]: !searchOptions[option.key],
+                            };
+                            activeMatch = -1;
+                          },
+                        },
+                        option.text,
+                      ),
+                    ),
+                    m(
+                      "button.md-search-action",
+                      {
+                        type: "button",
+                        title: t("previousMatch"),
+                        "aria-label": t("previousMatch"),
+                        disabled: !matches.length,
+                        onclick: () => moveToMatch(-1),
+                      },
+                      "↑",
+                    ),
+                    m(
+                      "button.md-search-action",
+                      {
+                        type: "button",
+                        title: t("nextMatch"),
+                        "aria-label": t("nextMatch"),
+                        disabled: !matches.length,
+                        onclick: () => moveToMatch(1),
+                      },
+                      "↓",
+                    ),
+                    m(
+                      "button.md-search-action",
+                      {
+                        type: "button",
+                        title: showReplace
+                          ? t("hideReplace")
+                          : t("showReplace"),
+                        "aria-label": showReplace
+                          ? t("hideReplace")
+                          : t("showReplace"),
+                        "aria-expanded": showReplace ? "true" : "false",
+                        onclick: () => {
+                          showReplace = !showReplace;
+                        },
+                      },
+                      "↔",
+                    ),
+                    m(
+                      "button.md-search-action",
+                      {
+                        type: "button",
+                        title: t("closeSearch"),
+                        "aria-label": t("closeSearch"),
+                        onclick: () => {
+                          showSearch = false;
+                          showReplace = false;
+                        },
+                      },
+                      "×",
+                    ),
+                  ]),
+                  showReplace &&
+                    m(".md-search-row", [
+                      m("input.md-replace-input", {
+                        type: "text",
+                        value: replacement,
+                        placeholder: t("replace"),
+                        "aria-label": t("replace"),
+                        oninput: (event: Event) => {
+                          replacement = (
+                            event.target as HTMLInputElement
+                          ).value;
+                        },
+                      }),
+                      m(
+                        "button.md-search-action",
+                        {
+                          type: "button",
+                          disabled: !matches.length,
+                          onclick: () => replaceMatches(false),
+                        },
+                        t("replace"),
+                      ),
+                      m(
+                        "button.md-search-action",
+                        {
+                          type: "button",
+                          disabled: !matches.length,
+                          onclick: () => replaceMatches(true),
+                        },
+                        t("replaceAll"),
+                      ),
+                    ]),
+                ],
+              ),
             currentMode === "markdown"
               ? m(
                   ".md-markdown-editor-container",
@@ -414,20 +894,29 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     m("pre.md-syntax-highlight", {
                       oncreate: (vnode: m.VnodeDOM) => {
                         highlightPre = vnode.dom as HTMLElement;
-                        updateHighlightOverlay(markdownContent);
+                        updateHighlightOverlay(maskedMarkdown.display);
                       },
                       onupdate: () => {
-                        updateHighlightOverlay(markdownContent);
+                        updateHighlightOverlay(maskedMarkdown.display);
                       },
                     }),
                     m("textarea.md-markdown-area[name=markdown-area]", {
                       placeholder,
-                      value: markdownContent,
+                      value: maskedMarkdown.display,
                       oninput: (e: Event) => {
                         const target = e.target as HTMLTextAreaElement;
-                        handleContentChange(target.value, "markdown");
+                        handleContentChange(
+                          applyMaskedMarkdownEdit(
+                            markdownContent,
+                            maskedMarkdown.display,
+                            target.value,
+                            maskedMarkdown.hiddenImages,
+                          ),
+                          "markdown",
+                        );
                       },
                       onkeydown: (e: Event) => {
+                        if (handleEditorKeyDown(e)) return;
                         const target = e.target as HTMLTextAreaElement;
                         editorActions?.handleKeyDown(e);
                         // Force the view to catch up with the DOM mutation
@@ -443,9 +932,19 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                       },
                       onpaste: (e: Event) => editorActions?.handlePaste(e),
                       oncreate: (vnode: m.VnodeDOM) => {
-                        const textareaEl = vnode.dom as HTMLTextAreaElement;
-                        editorActions?.setTextarea(textareaEl);
-                        markdownTextarea = textareaEl;
+                        const textarea = vnode.dom as HTMLTextAreaElement;
+                        editorActions?.setTextarea(textarea);
+                        markdownTextarea = textarea;
+                        if (pendingMarkdownIndex !== null) {
+                          const displayIndex = sourceIndexToDisplayIndex(
+                            maskedMarkdown.display,
+                            pendingMarkdownIndex,
+                            maskedMarkdown.hiddenImages,
+                          );
+                          textarea.setSelectionRange(displayIndex, displayIndex);
+                          textarea.focus();
+                          pendingMarkdownIndex = null;
+                        }
                       },
                       onscroll: () => {
                         if (highlightPre && markdownTextarea) {
@@ -464,7 +963,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     const target = e.target as HTMLElement;
                     handleContentChange(target.innerHTML, "wysiwyg");
                   },
-                  onkeydown: (e: Event) => editorActions?.handleKeyDown(e),
+                  onkeydown: (e: Event) => {
+                    if (!handleEditorKeyDown(e)) editorActions?.handleKeyDown(e);
+                  },
                   oncontextmenu: (e: MouseEvent) => {
                     // Check if we're right-clicking on a table
                     const target = e.target as HTMLElement;
@@ -516,6 +1017,14 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     const element = vnode.dom as HTMLElement;
                     element.innerHTML = wysiwygContent;
                     editorActions?.setContentEditable(element);
+                    if (pendingTextOffset !== null) {
+                      selectTextRange(
+                        element,
+                        pendingTextOffset,
+                        pendingTextOffset,
+                      );
+                      pendingTextOffset = null;
+                    }
                   },
                   onupdate: (vnode: m.VnodeDOM) => {
                     const element = vnode.dom as HTMLElement;
@@ -529,7 +1038,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     }
                   },
                 }),
-          ]),
+          ].filter(Boolean)),
           showTabs &&
             m(".md-tabs", [
               m(

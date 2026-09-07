@@ -6,6 +6,8 @@
  * DOM-free (regex-based) alternative see `html-to-markdown.ts`.
  */
 
+import { PAGE_BREAK_MARKER } from "./editor-content";
+
 export class BuiltinHtmlToMarkdown {
   /**
    * Main conversion function - converts HTML string or element to markdown
@@ -31,7 +33,9 @@ export class BuiltinHtmlToMarkdown {
 
     // Clean up multiple newlines and trailing spaces
     markdown = markdown.replace(/\n\s*\n\s*\n+/g, "\n\n");
-    markdown = markdown.replace(/ +\n/g, "\n");
+    markdown = markdown.replace(/ +\n/g, (spacesAndNewline) =>
+      spacesAndNewline.length > 2 ? "  \n" : "\n",
+    );
 
     return markdown.trim();
   }
@@ -56,32 +60,6 @@ export class BuiltinHtmlToMarkdown {
         parentElement.removeChild(nextNode);
         nextNode = currentNode.nextSibling;
       }
-      // Handle BR elements
-      else if (currentNode.nodeName === "BR") {
-        if (
-          !nextNode ||
-          nextNode.nodeName === "BR" ||
-          this._isBlockElement(nextNode)
-        ) {
-          const textNode = document.createTextNode("\n");
-          parentElement.insertBefore(textNode, currentNode);
-        } else if (
-          nextNode.nodeType === Node.TEXT_NODE &&
-          !nextNode.textContent!.startsWith("\n")
-        ) {
-          nextNode.textContent = "\n" + nextNode.textContent;
-        } else if (
-          nextNode.nodeType === Node.ELEMENT_NODE &&
-          !this._isBlockElement(nextNode)
-        ) {
-          const textNode = document.createTextNode("\n");
-          parentElement.insertBefore(textNode, nextNode);
-        }
-        parentElement.removeChild(currentNode);
-        currentNode = nextNode;
-        continue;
-      }
-
       // Recursively normalize child nodes
       if (
         currentNode &&
@@ -179,7 +157,7 @@ export class BuiltinHtmlToMarkdown {
         return text;
 
       case "BR":
-        return options.inTableCell ? "<br>" : "\n";
+        return options.inTableCell ? "<br>" : "  \n";
 
       case "IMG":
         if (options.inTableCell) {
@@ -322,6 +300,9 @@ export class BuiltinHtmlToMarkdown {
           return this._nodeToHtmlForTableCell(node as HTMLElement);
         }
         const divElement = node as HTMLElement;
+        if (divElement.dataset.markdownPageBreak === "true") {
+          return `\n${PAGE_BREAK_MARKER}\n\n`;
+        }
         const divContent = this._processInlineContainerRecursive(
           node,
           options,

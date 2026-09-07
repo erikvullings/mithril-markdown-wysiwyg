@@ -8,37 +8,46 @@ describe("highlightMarkdown", () => {
 
   it("highlights headings", () => {
     const html = highlightMarkdown("# Hello World");
-    expect(html).toContain('<span class="md-syn-heading">#</span> Hello World');
+    expect(html).toBe(
+      '<span class="md-syn-heading"># Hello World</span>',
+    );
   });
 
   it("highlights bold text", () => {
     const html = highlightMarkdown("**bold**");
-    expect(html).toBe('<span class="md-syn-bold">**</span>bold<span class="md-syn-bold">**</span>');
+    expect(html).toBe('<span class="md-syn-bold">**bold**</span>');
   });
 
   it("highlights italic text", () => {
     const html = highlightMarkdown("*italic*");
-    expect(html).toBe('<span class="md-syn-italic">*</span>italic<span class="md-syn-italic">*</span>');
+    expect(html).toBe('<span class="md-syn-italic">*italic*</span>');
   });
 
   it("highlights links", () => {
     const html = highlightMarkdown("[text](url)");
-    expect(html).toContain('<span class="md-syn-link">[</span>text](url)');
+    expect(html).toBe('<span class="md-syn-link">[text](url)</span>');
   });
 
   it("highlights images", () => {
     const html = highlightMarkdown("![alt](src)");
-    expect(html).toContain('<span class="md-syn-image">![</span>alt](src)');
+    expect(html).toBe('<span class="md-syn-image">![alt](src)</span>');
   });
 
   it("highlights inline code", () => {
     const html = highlightMarkdown("`code`");
-    expect(html).toBe('<span class="md-syn-code">`</span>code<span class="md-syn-code">`</span>');
+    expect(html).toBe('<span class="md-syn-code">`code`</span>');
+  });
+
+  it("does not close inline code on part of a longer backtick run", () => {
+    const html = highlightMarkdown("`a``b`");
+    expect(html).toBe('<span class="md-syn-code">`a``b`</span>');
   });
 
   it("highlights blockquote markers", () => {
     const html = highlightMarkdown("> quoted");
-    expect(html).toContain('<span class="md-syn-blockquote">&gt; </span>quoted');
+    expect(html).toBe(
+      '<span class="md-syn-blockquote">&gt; quoted</span>',
+    );
   });
 
   it("escapes HTML entities in output", () => {
@@ -48,9 +57,29 @@ describe("highlightMarkdown", () => {
     expect(html).toContain("&gt;");
   });
 
-  it("highlights code blocks", () => {
-    const html = highlightMarkdown("```\ncode\n```");
+  it("highlights fenced source code using its declared language", () => {
+    const html = highlightMarkdown("```js\nconst answer = 42;\n```");
+    expect(html).toContain(
+      '<span class="md-syn-code-block">```js</span>',
+    );
+    expect(html).toContain('<span class="md-syn-keyword">const</span>');
+    expect(html).toContain('<span class="md-syn-number">42</span>');
     expect(html).toContain('<span class="md-syn-code-block">```</span>');
+  });
+
+  it("highlights tilde-fenced source code", () => {
+    const html = highlightMarkdown("~~~~python\ndef answer():\n    return 42\n~~~~");
+    expect(html).toContain(
+      '<span class="md-syn-code-block">~~~~python</span>',
+    );
+    expect(html).toContain('<span class="md-syn-keyword">def</span>');
+    expect(html).toContain('<span class="md-syn-keyword">return</span>');
+  });
+
+  it("does not treat a backtick in the info string as a code fence", () => {
+    const html = highlightMarkdown("```js`oops\nconst answer = 42;");
+    expect(html).not.toContain("md-syn-keyword");
+    expect(html).not.toContain("md-syn-number");
   });
 });
 

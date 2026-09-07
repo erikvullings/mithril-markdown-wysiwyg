@@ -99,7 +99,7 @@ describe("markdownGrammar", () => {
     const result = tokenize("# Title", markdownGrammar);
     const heading = result.find((t) => t.type === "heading");
     expect(heading).toBeDefined();
-    expect(heading!.text).toBe("#");
+    expect(heading!.text).toBe("# Title");
   });
 
   it("tokens bold text", () => {
@@ -117,7 +117,7 @@ describe("markdownGrammar", () => {
   it("tokens inline code", () => {
     const result = tokenize("`code`", markdownGrammar);
     const code = result.find((t) => t.type === "code");
-    expect(code).toBeDefined();
+    expect(code?.text).toBe("`code`");
   });
 
   it("tokens fenced code blocks", () => {

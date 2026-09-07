@@ -5,8 +5,11 @@ A powerful WYSIWYG markdown editor built with Mithril.js, featuring dual-mode ed
 ## Features
 
 - 🎨 **Dual Mode**: Switch seamlessly between WYSIWYG and Markdown modes
-- 🌓 **Theme Support**: Light and dark themes included
+- 🌓 **Theme Support**: Light, dark, and automatic system themes
 - 🛠️ **Rich Toolbar**: Full formatting options including bold, italic, headers, lists, links, images, and tables
+- 🔎 **Find and Replace**: VS Code-style search with case, whole-word, and regex options
+- 📖 **EPUB Editing**: Preserved hard breaks, paragraphs, and semantic page breaks
+- 🖼️ **Compact Markdown**: Optionally hide large inline base64 image payloads while editing
 - 📱 **Responsive**: Works great on desktop and mobile devices
 - 🎯 **TypeScript**: Full TypeScript support with proper type definitions
 - 🔧 **Pluggable Renderers**: Use any markdown renderer (marked.js, `slimdown-js`, etc.)
@@ -181,8 +184,9 @@ interface MarkdownEditorAttrs {
 
   // Display options
   mode?: 'wysiwyg' | 'markdown' // Edit mode (default: "wysiwyg")
-  theme?: 'light' | 'dark' // Theme (default: "light")
+  theme?: 'light' | 'dark' | 'auto' // Theme (default: "light")
   placeholder?: string // Placeholder text
+  hideBase64Images?: boolean // Mask inline image data in Markdown mode
 
   // UI options
   toolbar?: boolean // Show toolbar (default: true)
@@ -243,7 +247,26 @@ m(MarkdownEditor, { theme: 'light' /* ... */ })
 
 // Dark theme
 m(MarkdownEditor, { theme: 'dark' /* ... */ })
+
+// Follow the operating-system theme
+m(MarkdownEditor, { theme: 'auto' /* ... */ })
 ```
+
+#### EPUB authoring
+
+`Enter` starts a new paragraph and `Shift+Enter` inserts a hard line break.
+Both remain distinct when switching modes. The page-break toolbar button inserts
+the portable marker `<!-- markdown:page-break -->`; rendered HTML uses a
+`role="doc-pagebreak"` element with both `break-after: page` and
+`page-break-after: always` styling for EPUB compatibility.
+
+Set `hideBase64Images: true` to replace inline base64 payloads with compact,
+size-labelled placeholders in Markdown mode. The original data remains in the
+editor value and images continue to render normally in WYSIWYG mode.
+
+Use `Cmd+F`/`Ctrl+F` for find and `Cmd+H`/`Ctrl+H` for find and replace.
+Search supports previous/next navigation, case sensitivity, whole words, and
+regular expressions.
 
 ## Supported Formatting
 
@@ -255,7 +278,7 @@ The editor supports all standard markdown formatting:
 - **Links and images**: With modal dialogs for easy insertion
 - **Code**: Inline code and code blocks
 - **Tables**: Full table editing with context menu
-- **Block elements**: Block-quotes, horizontal rules
+- **Block elements**: Block-quotes, horizontal rules, EPUB page breaks
 - **Advanced**: Copy/paste, undo/redo, drag & drop
 
 ## Browser Support

@@ -29,6 +29,7 @@ const ICON_INDENT = `<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width
 
 const ICON_BLOCKQUOTE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zM15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>`;
 const ICON_HR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="20" y2="12"/></svg>`;
+const ICON_PAGE_BREAK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v5M5 20h14v-5"/><path d="M3 12h4m3 0h4m3 0h4"/></svg>`;
 
 const ICON_IMAGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
 const ICON_TABLE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>`;
@@ -218,6 +219,12 @@ export const toolbarButtonGroups = [
       action: "horizontalRule",
       shortcut: "Ctrl+R",
     },
+    {
+      name: "page-break",
+      icon: ICON_PAGE_BREAK,
+      title: "Page Break",
+      action: "pageBreak",
+    },
   ],
   // Group 6: Media
   [
@@ -345,6 +352,7 @@ const BUTTON_I18N_KEY: Partial<Record<string, keyof I18nStrings>> = {
   indent: "indent",
   blockquote: "blockquote",
   "horizontal-rule": "horizontalRule",
+  "page-break": "pageBreak",
   image: "image",
   table: "table",
   undo: "undo",
