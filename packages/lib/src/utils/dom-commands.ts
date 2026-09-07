@@ -2,6 +2,7 @@
  * DOM manipulation utilities for WYSIWYG editor operations
  * Functions for executing commands in contentEditable elements
  */
+import { PAGE_BREAK_HTML } from "./editor-content";
 
 export interface ContentEditableElement extends HTMLElement {
   contentEditable: string;
@@ -204,6 +205,9 @@ export const insertHorizontalRuleWYSIWYG: DOMAction = (element) => {
   }
   return insertHTML(element, "<hr>");
 };
+
+export const insertPageBreakWYSIWYG: DOMAction = (element) =>
+  insertHTML(element, PAGE_BREAK_HTML);
 
 /**
  * Insert inline code

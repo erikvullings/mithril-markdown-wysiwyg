@@ -102,6 +102,59 @@ describe("EditorActions.handleKeyDown", () => {
     expect(notified[notified.length - 1]).toBe("- item 1\n- ");
   });
 
+  it("starts a Markdown paragraph on Enter", () => {
+    const notified: string[] = [];
+    const actions = new EditorActions((content) => notified.push(content));
+    actions.setMode("markdown");
+    const textarea = document.createElement("textarea");
+    textarea.value = "first";
+    textarea.setSelectionRange(5, 5);
+    actions.setTextarea(textarea);
+    const event = makeKeyEvent({ key: "Enter" });
+
+    actions.handleKeyDown(event as unknown as Event);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(textarea.value).toBe("first\n\n");
+    expect(notified[notified.length - 1]).toBe("first\n\n");
+  });
+
+  it("starts a hard line break on Shift+Enter", () => {
+    const notified: string[] = [];
+    const actions = new EditorActions((content) => notified.push(content));
+    actions.setMode("markdown");
+    const textarea = document.createElement("textarea");
+    textarea.value = "first";
+    textarea.setSelectionRange(5, 5);
+    actions.setTextarea(textarea);
+    const event = makeKeyEvent({ key: "Enter", shiftKey: true });
+
+    actions.handleKeyDown(event as unknown as Event);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(textarea.value).toBe("first  \n");
+    expect(notified[notified.length - 1]).toBe("first  \n");
+  });
+
+  it.each(["~~~", "``````"])(
+    "uses a single newline inside a %s fenced code block",
+    (fence) => {
+      const actions = new EditorActions();
+      actions.setMode("markdown");
+      const textarea = document.createElement("textarea");
+      textarea.value = `${fence}\ncode`;
+      document.body.appendChild(textarea);
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      actions.setTextarea(textarea);
+
+      actions.handleKeyDown(
+        makeKeyEvent({ key: "Enter" }) as unknown as Event,
+      );
+
+      expect(textarea.value).toBe(`${fence}\ncode\n`);
+    },
+  );
+
   it("indents on Tab in markdown mode and notifies the resulting content", () => {
     const notified: string[] = [];
     const actions = new EditorActions((content) => notified.push(content));
@@ -184,6 +237,23 @@ describe("EditorActions taskList action", () => {
 
     expect(textarea.value).toBe("- [ ] buy milk");
     expect(notified[notified.length - 1]).toBe("- [ ] buy milk");
+  });
+
+  describe("EditorActions pageBreak action", () => {
+    it("inserts the portable page-break marker in Markdown mode", () => {
+      const actions = new EditorActions();
+      actions.setMode("markdown");
+      const textarea = document.createElement("textarea");
+      textarea.value = "before";
+      textarea.setSelectionRange(6, 6);
+      actions.setTextarea(textarea);
+
+      actions.executeAction("pageBreak");
+
+      expect(textarea.value).toBe(
+        "before\n\n<!-- markdown:page-break -->\n\n",
+      );
+    });
   });
 
   it("adds a checkbox to the current WYSIWYG list item via executeAction", () => {

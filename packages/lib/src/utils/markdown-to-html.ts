@@ -3,6 +3,7 @@
  * (https://github.com/erikvullings/slimdown-js).
  */
 import { render, type RenderOptions } from "slimdown-js";
+import { expandPageBreakMarkers } from "./editor-content";
 
 export type MarkdownToHtmlOptions = RenderOptions;
 
@@ -16,7 +17,7 @@ export const markdownToHtml = (
   if (!markdown || markdown.trim() === "") {
     return "";
   }
-  return render(markdown, options);
+  return render(expandPageBreakMarkers(markdown), options);
 };
 
 /**

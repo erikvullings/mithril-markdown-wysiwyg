@@ -12,6 +12,7 @@ export interface I18nStrings {
   orderedList: string;
   blockquote: string;
   horizontalRule: string;
+  pageBreak: string;
   undo: string;
   redo: string;
   heading: string;
@@ -20,6 +21,19 @@ export interface I18nStrings {
   outdent: string;
   checklist: string;
   clearFormat: string;
+  find: string;
+  replace: string;
+  replaceAll: string;
+  noResults: string;
+  invalidExpression: string;
+  matchCase: string;
+  matchWholeWord: string;
+  useRegularExpression: string;
+  previousMatch: string;
+  nextMatch: string;
+  showReplace: string;
+  hideReplace: string;
+  closeSearch: string;
 
   // Table menu
   insertRowAbove: string;
@@ -81,6 +95,7 @@ export const defaultStrings: I18nStrings = {
   orderedList: "Ordered List",
   blockquote: "Blockquote",
   horizontalRule: "Horizontal Rule",
+  pageBreak: "Page Break",
   undo: "Undo",
   redo: "Redo",
   heading: "Heading",
@@ -89,6 +104,19 @@ export const defaultStrings: I18nStrings = {
   outdent: "Decrease Indent",
   checklist: "Task List",
   clearFormat: "Clear Formatting",
+  find: "Find",
+  replace: "Replace",
+  replaceAll: "All",
+  noResults: "No results",
+  invalidExpression: "Invalid expression",
+  matchCase: "Match case",
+  matchWholeWord: "Match whole word",
+  useRegularExpression: "Use regular expression",
+  previousMatch: "Previous match",
+  nextMatch: "Next match",
+  showReplace: "Show replace",
+  hideReplace: "Hide replace",
+  closeSearch: "Close search",
 
   // Table menu
   insertRowAbove: "Insert Row Above",

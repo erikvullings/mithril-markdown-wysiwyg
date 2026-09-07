@@ -15,6 +15,10 @@ import * as MarkdownUtils from "./utils/markdown-formatting";
 import * as DOMUtils from "./utils/dom-commands";
 import { createContentHistory, ContentHistory } from "./utils/content-history";
 import {
+  isInsideFencedCode,
+  PAGE_BREAK_MARKER,
+} from "./utils/editor-content";
+import {
   handleKeyboardShortcut,
   getPlatformShortcuts,
   handleTabKey,
@@ -157,8 +161,27 @@ export class EditorActions {
 
       // Enter key handling for smart lists
       if (keyboardEvent.key === "Enter") {
+        if (keyboardEvent.shiftKey) {
+          keyboardEvent.preventDefault();
+          const content = insertText(textarea, "  \n", 3, 0);
+          this.onContentChange?.(content);
+          return;
+        }
         if (handleEnterKey(keyboardEvent, textarea)) {
           this.onContentChange?.(textarea.value);
+        } else {
+          keyboardEvent.preventDefault();
+          const inCodeBlock = isInsideFencedCode(
+            textarea.value,
+            textarea.selectionStart,
+          );
+          const content = insertText(
+            textarea,
+            inCodeBlock ? "\n" : "\n\n",
+            inCodeBlock ? 1 : 2,
+            0,
+          );
+          this.onContentChange?.(content);
         }
         return;
       }
@@ -273,6 +296,9 @@ export class EditorActions {
         break;
       case "horizontalRule":
         this.horizontalRule();
+        break;
+      case "pageBreak":
+        this.pageBreak();
         break;
 
       // Media
@@ -506,6 +532,20 @@ export class EditorActions {
     } else if (this.textarea) {
       this.executeAndNotify(() =>
         MarkdownUtils.insertHorizontalRule(this.textarea as TextArea),
+      );
+    }
+  }
+
+  pageBreak(): void {
+    if (this.mode === "wysiwyg" && this.contentEditable) {
+      this.executeAndNotify(() =>
+        DOMUtils.insertPageBreakWYSIWYG(
+          this.contentEditable as ContentEditableElement,
+        ),
+      );
+    } else if (this.textarea) {
+      this.executeAndNotify(() =>
+        insertText(this.textarea as TextArea, `\n\n${PAGE_BREAK_MARKER}\n\n`),
       );
     }
   }
