@@ -11,12 +11,12 @@
   "dependencies": {
     "mithril": "^2.3.8",
     "mithril-markdown-wysiwyg": "workspace:*",
-    "marked": "^18.0.9",
-    "slimdown-js": "^1.4.1"
+    "marked": "^18.0.11",
+    "slimdown-js": "^1.5.0"
   },
   "devDependencies": {
-    "@types/mithril": "2.2.8",
+    "@types/mithril": "2.2.9",
     "typescript": "^7.0.2",
-    "vite": "^8.2.1"
+    "vite": "^8.2.2"
   }
 }
