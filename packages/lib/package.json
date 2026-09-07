@@ -62,7 +62,7 @@
     "mithril": "^2.3.8"
   },
   "dependencies": {
-    "slimdown-js": "^1.5.1"
+    "slimdown-js": "^1.5.2"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^7.0.0",
