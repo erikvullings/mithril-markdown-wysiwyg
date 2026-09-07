@@ -36,8 +36,8 @@ importers:
   packages/lib:
     dependencies:
       slimdown-js:
-        specifier: ^1.5.0
-        version: 1.5.0
+        specifier: ^1.5.1
+        version: 1.5.1
     devDependencies:
       '@semantic-release/changelog':
         specifier: ^7.0.0
@@ -1625,6 +1625,10 @@ packages:
 
   slimdown-js@1.5.0:
     resolution: {integrity: sha512-D/MfWv0+MPeYm2sNrw8A7hG39s22Q903VBjD8gG/LNuEm+JtPlx4TeueElqAZ3Hbp2/8dPr5O7hRin7+jJE7/A==}
+    engines: {node: '>=16'}
+
+  slimdown-js@1.5.1:
+    resolution: {integrity: sha512-CoFpu4YyCn6PA45l/qfIWcERGiYVtvYW7V49QfJJ7A7aXv5THi/Yh3e1VsGZK8NRD0ZHdUykQra78F/zMrTesw==}
     engines: {node: '>=16'}
 
   source-map-js@1.2.1:
@@ -3427,6 +3431,8 @@ snapshots:
       unicode-emoji-modifier-base: 1.0.0
 
   slimdown-js@1.5.0: {}
+
+  slimdown-js@1.5.1: {}
 
   source-map-js@1.2.1: {}
 
