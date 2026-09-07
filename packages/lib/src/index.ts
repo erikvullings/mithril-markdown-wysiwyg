@@ -37,3 +37,19 @@ export * from "./utils/text-manipulation";
 export * from "./utils/markdown-formatting";
 export * from "./utils/dom-commands";
 export * from "./utils/keyboard-shortcuts";
+
+// Syntax highlighting
+export {
+  tokenize,
+  escapeHTML,
+  renderToHTML,
+} from "./utils/syntax-tokenizer";
+export type { GrammarRule, Token } from "./utils/syntax-tokenizer";
+export { markdownGrammar } from "./utils/markdown-grammar";
+export {
+  codeGrammar,
+  jsTsRules,
+  pythonRules,
+  getGrammarForLanguage,
+} from "./utils/code-grammar";
+export { highlightMarkdown, highlightCodeBlocks } from "./utils/syntax-highlighter";

@@ -28,7 +28,6 @@ describe("MarkdownEditor modes", () => {
     const root = mountEditor({ content: "# Heading", mode: "markdown" });
 
     expect(root.querySelector("textarea")?.value).toBe("# Heading");
-
     const tabs = root.querySelectorAll<HTMLButtonElement>(".md-tab-button");
     tabs[0].click();
     m.redraw.sync();
