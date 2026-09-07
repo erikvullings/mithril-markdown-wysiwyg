@@ -24,7 +24,10 @@ import {
   displayIndexToSourceIndex,
   expandPageBreakMarkers,
   findTextMatches,
+  isInsideFencedCode,
+  isPageBreakMarkerLine,
   maskBase64Images,
+  PAGE_BREAK_MARKER,
   replaceTextRange,
   searchableDomText,
   selectTextRange,
@@ -40,6 +43,11 @@ import {
 } from "./utils/syntax-highlighter";
 import { markdownGrammar } from "./utils/markdown-grammar";
 
+type PageBreakBoundary = {
+  ordinal: number;
+  side: "before" | "after";
+};
+
 export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let wysiwygContent = "";
   let markdownContent = "";
@@ -49,6 +57,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
   let editorRoot: HTMLElement | null = null;
   let pendingTextOffset: number | null = null;
   let pendingMarkdownIndex: number | null = null;
+  let pendingPageBreakBoundary: PageBreakBoundary | null = null;
+  let pendingMarkdownPageBreakBoundary: PageBreakBoundary | null = null;
+  let pendingModeScroll: { top: number; left: number } | null = null;
   let activeHiddenImages: HiddenBase64Image[] = [];
   let activeMaskedDisplay = "";
   let activeMarkdownSource = "";
@@ -84,10 +95,9 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
     if (!markdown || markdown.trim() === "") {
       return "";
     }
-    const expandedMarkdown = expandPageBreakMarkers(markdown);
     return markdownToHtml
-      ? markdownToHtml(expandedMarkdown)
-      : markdownToWysiwygHtml(expandedMarkdown);
+      ? markdownToHtml(expandPageBreakMarkers(markdown))
+      : markdownToWysiwygHtml(markdown);
   };
 
   const htmlText = (html: string): string => {
@@ -185,6 +195,97 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
         ? current
         : best,
     );
+  };
+
+  const pageBreakMarkerIndexes = (markdown: string): number[] => {
+    const indexes: number[] = [];
+    let markerStart = markdown.indexOf(PAGE_BREAK_MARKER);
+    while (markerStart >= 0) {
+      const lineStart = markdown.lastIndexOf("\n", markerStart - 1) + 1;
+      const lineEnd = markdown.indexOf("\n", markerStart);
+      const line = markdown.slice(
+        lineStart,
+        lineEnd < 0 ? markdown.length : lineEnd,
+      );
+      if (
+        isPageBreakMarkerLine(line) &&
+        !isInsideFencedCode(markdown, markerStart)
+      ) {
+        indexes.push(markerStart);
+      }
+      markerStart = markdown.indexOf(
+        PAGE_BREAK_MARKER,
+        markerStart + PAGE_BREAK_MARKER.length,
+      );
+    }
+    return indexes;
+  };
+
+  const pageBreakBoundaryAtMarkdownIndex = (
+    markdown: string,
+    index: number,
+  ): PageBreakBoundary | null => {
+    const markerIndexes = pageBreakMarkerIndexes(markdown);
+    for (let ordinal = 0; ordinal < markerIndexes.length; ordinal++) {
+      const markerStart = markerIndexes[ordinal];
+      if (index === markerStart) return { ordinal, side: "before" };
+      if (index === markerStart + PAGE_BREAK_MARKER.length) {
+        return { ordinal, side: "after" };
+      }
+    }
+    return null;
+  };
+
+  const markdownIndexForPageBreakBoundary = (
+    markdown: string,
+    boundary: PageBreakBoundary,
+  ): number | null => {
+    const markerStart = pageBreakMarkerIndexes(markdown)[boundary.ordinal];
+    if (markerStart === undefined) return null;
+    return (
+      markerStart +
+      (boundary.side === "after" ? PAGE_BREAK_MARKER.length : 0)
+    );
+  };
+
+  const pageBreakBoundaryAtDomSelection = (
+    root: HTMLElement,
+    range: Range,
+  ): PageBreakBoundary | null => {
+    const pageBreaks = Array.from(
+      root.querySelectorAll<HTMLElement>('[data-markdown-page-break="true"]'),
+    );
+    for (let ordinal = 0; ordinal < pageBreaks.length; ordinal++) {
+      const pageBreak = pageBreaks[ordinal];
+      const parent = pageBreak.parentNode;
+      if (!parent || range.startContainer !== parent) continue;
+      const offset = Array.from(parent.childNodes).indexOf(pageBreak);
+      if (range.startOffset === offset) return { ordinal, side: "before" };
+      if (range.startOffset === offset + 1) return { ordinal, side: "after" };
+    }
+    return null;
+  };
+
+  const selectPageBreakBoundary = (
+    root: HTMLElement,
+    boundary: PageBreakBoundary,
+  ): boolean => {
+    const pageBreak = root.querySelectorAll<HTMLElement>(
+      '[data-markdown-page-break="true"]',
+    )[boundary.ordinal];
+    const parent = pageBreak?.parentNode;
+    if (!pageBreak || !parent) return false;
+    const offset =
+      Array.from(parent.childNodes).indexOf(pageBreak) +
+      (boundary.side === "after" ? 1 : 0);
+    const range = document.createRange();
+    range.setStart(parent, offset);
+    range.collapse(true);
+    const selection = document.getSelection();
+    root.focus();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    return true;
   };
 
   // Modal states
@@ -302,6 +403,17 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
 
       const handleModeChange = (newMode: "wysiwyg" | "markdown") => {
         if (newMode !== currentMode) {
+          const scrollSource =
+            currentMode === "markdown"
+              ? editorActions?.getTextarea()
+              : editorActions?.getContentEditable();
+          if (scrollSource) {
+            pendingModeScroll = {
+              top: scrollSource.scrollTop,
+              left: scrollSource.scrollLeft,
+            };
+          }
+
           if (currentMode === "markdown") {
             const textarea = editorActions?.getTextarea();
             if (textarea) {
@@ -310,11 +422,17 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                 textarea.selectionStart,
                 maskedMarkdown.hiddenImages,
               );
-              pendingTextOffset = markdownTextOffset(
+              pendingPageBreakBoundary = pageBreakBoundaryAtMarkdownIndex(
                 markdownContent,
                 sourceIndex,
-                markdownToHtml,
               );
+              if (!pendingPageBreakBoundary) {
+                pendingTextOffset = markdownTextOffset(
+                  markdownContent,
+                  sourceIndex,
+                  markdownToHtml,
+                );
+              }
             }
           } else {
             const contentEditable = editorActions?.getContentEditable();
@@ -325,12 +443,20 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
               contentEditable.contains(selection.anchorNode)
             ) {
               const range = selection.getRangeAt(0);
-              pendingMarkdownIndex = markdownIndexForDomSelection(
-                markdownContent,
+              const pageBreakBoundary = pageBreakBoundaryAtDomSelection(
                 contentEditable,
                 range,
-                markdownToHtml,
               );
+              if (pageBreakBoundary) {
+                pendingMarkdownPageBreakBoundary = pageBreakBoundary;
+              } else {
+                pendingMarkdownIndex = markdownIndexForDomSelection(
+                    markdownContent,
+                    contentEditable,
+                    range,
+                    markdownToHtml,
+                  );
+              }
             }
           }
 
@@ -935,15 +1061,31 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                         const textarea = vnode.dom as HTMLTextAreaElement;
                         editorActions?.setTextarea(textarea);
                         markdownTextarea = textarea;
-                        if (pendingMarkdownIndex !== null) {
+                        const markdownIndex = pendingMarkdownPageBreakBoundary
+                          ? markdownIndexForPageBreakBoundary(
+                              markdownContent,
+                              pendingMarkdownPageBreakBoundary,
+                            )
+                          : pendingMarkdownIndex;
+                        if (markdownIndex !== null) {
                           const displayIndex = sourceIndexToDisplayIndex(
                             maskedMarkdown.display,
-                            pendingMarkdownIndex,
+                            markdownIndex,
                             maskedMarkdown.hiddenImages,
                           );
                           textarea.setSelectionRange(displayIndex, displayIndex);
                           textarea.focus();
-                          pendingMarkdownIndex = null;
+                        }
+                        pendingMarkdownIndex = null;
+                        pendingMarkdownPageBreakBoundary = null;
+                        if (pendingModeScroll) {
+                          textarea.scrollTop = pendingModeScroll.top;
+                          textarea.scrollLeft = pendingModeScroll.left;
+                          if (highlightPre) {
+                            highlightPre.scrollTop = pendingModeScroll.top;
+                            highlightPre.scrollLeft = pendingModeScroll.left;
+                          }
+                          pendingModeScroll = null;
                         }
                       },
                       onscroll: () => {
@@ -1017,13 +1159,21 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                     const element = vnode.dom as HTMLElement;
                     element.innerHTML = wysiwygContent;
                     editorActions?.setContentEditable(element);
-                    if (pendingTextOffset !== null) {
+                    if (pendingPageBreakBoundary) {
+                      selectPageBreakBoundary(element, pendingPageBreakBoundary);
+                      pendingPageBreakBoundary = null;
+                    } else if (pendingTextOffset !== null) {
                       selectTextRange(
                         element,
                         pendingTextOffset,
                         pendingTextOffset,
                       );
                       pendingTextOffset = null;
+                    }
+                    if (pendingModeScroll) {
+                      element.scrollTop = pendingModeScroll.top;
+                      element.scrollLeft = pendingModeScroll.left;
+                      pendingModeScroll = null;
                     }
                   },
                   onupdate: (vnode: m.VnodeDOM) => {

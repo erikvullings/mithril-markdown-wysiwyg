@@ -1,5 +1,5 @@
 import m from "mithril";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MarkdownEditor } from "./editor";
 import "./styles.css";
 import type { MarkdownEditorAttrs } from "./types";
@@ -203,5 +203,174 @@ describe("MarkdownEditor modes", () => {
 
     const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
     expect(textarea.selectionStart).toBe(markdown.indexOf(")") + 1);
+  });
+
+  it.each(["before", "after"] as const)(
+    "preserves the cursor immediately %s a page break",
+    (side) => {
+      const marker = "<!-- markdown:page-break -->";
+      const markdown = `Before\n\n${marker}\n\nAfter`;
+      const root = mountEditor({ content: markdown, mode: "markdown" });
+      const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+      const position =
+        markdown.indexOf(marker) + (side === "after" ? marker.length : 0);
+      textarea.focus();
+      textarea.setSelectionRange(position, position);
+
+      root.querySelector<HTMLButtonElement>(".md-tab-button")?.click();
+      m.redraw.sync();
+      expect(
+        root.querySelector('[data-markdown-page-break="true"]'),
+      ).toBeTruthy();
+
+      root
+        .querySelectorAll<HTMLButtonElement>(".md-tab-button")[1]
+        .click();
+      m.redraw.sync();
+
+      const restored = root.querySelector("textarea") as HTMLTextAreaElement;
+      expect(restored.selectionStart).toBe(position);
+      expect(restored.selectionEnd).toBe(position);
+    },
+  );
+
+  it.each(["before", "after"] as const)(
+    "preserves the cursor immediately %s a CRLF page break",
+    (side) => {
+      const marker = "<!-- markdown:page-break -->";
+      const markdown = `Before\r\n\r\n${marker}\r\n\r\nAfter`;
+      const normalizedMarkdown = `Before\n\n${marker}\n\nAfter`;
+      const root = mountEditor({ content: markdown, mode: "markdown" });
+      const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+      const position =
+        markdown.indexOf(marker) + (side === "after" ? marker.length : 0);
+      textarea.focus();
+      textarea.setSelectionRange(position, position);
+
+      root.querySelector<HTMLButtonElement>(".md-tab-button")?.click();
+      m.redraw.sync();
+      root.querySelectorAll<HTMLButtonElement>(".md-tab-button")[1].click();
+      m.redraw.sync();
+
+      const restored = root.querySelector("textarea") as HTMLTextAreaElement;
+      const expected =
+        normalizedMarkdown.indexOf(marker) +
+        (side === "after" ? marker.length : 0);
+      expect(restored.value).toBe(normalizedMarkdown);
+      expect(restored.selectionStart).toBe(expected);
+      expect(restored.selectionEnd).toBe(expected);
+    },
+  );
+
+  it("preserves scroll position in both mode changes", () => {
+    const root = mountEditor({
+      content: "First\n\nSecond\n\nThird",
+      mode: "markdown",
+    });
+    const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+    textarea.scrollTop = 120;
+    textarea.scrollLeft = 7;
+
+    root.querySelector<HTMLButtonElement>(".md-tab-button")?.click();
+    m.redraw.sync();
+
+    const editable = root.querySelector(".md-editable-area") as HTMLElement;
+    expect(editable.scrollTop).toBe(120);
+    expect(editable.scrollLeft).toBe(7);
+    editable.scrollTop = 80;
+    editable.scrollLeft = 3;
+
+    root.querySelectorAll<HTMLButtonElement>(".md-tab-button")[1].click();
+    m.redraw.sync();
+
+    const restored = root.querySelector("textarea") as HTMLTextAreaElement;
+    expect(restored.scrollTop).toBe(80);
+    expect(restored.scrollLeft).toBe(3);
+  });
+
+  it("keeps the page-break toolbar action available in both modes", () => {
+    const root = mountEditor({ content: "Before", mode: "markdown" });
+
+    expect(
+      root.querySelector<HTMLButtonElement>('button[title="Page Break"]')
+        ?.disabled,
+    ).toBe(false);
+
+    root.querySelector<HTMLButtonElement>(".md-tab-button")?.click();
+    m.redraw.sync();
+
+    expect(
+      root.querySelector<HTMLButtonElement>('button[title="Page Break"]')
+        ?.disabled,
+    ).toBe(false);
+  });
+
+  it("inserts page breaks from the toolbar in both modes", () => {
+    const root = mountEditor({ content: "Before", mode: "markdown" });
+    const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    root
+      .querySelector<HTMLButtonElement>('button[title="Page Break"]')
+      ?.click();
+    m.redraw.sync();
+    expect(textarea.value).toBe(
+      "Before\n\n<!-- markdown:page-break -->\n\n",
+    );
+
+    root.querySelector<HTMLButtonElement>(".md-tab-button")?.click();
+    m.redraw.sync();
+    const originalExecCommand = document.execCommand;
+    document.execCommand = vi.fn((_command, _showUi, value) => {
+      root
+        .querySelector(".md-editable-area")
+        ?.insertAdjacentHTML("beforeend", String(value));
+      return true;
+    }) as typeof document.execCommand;
+
+    try {
+      root
+        .querySelector<HTMLButtonElement>('button[title="Page Break"]')
+        ?.click();
+      m.redraw.sync();
+      expect(
+        root.querySelectorAll('[data-markdown-page-break="true"]'),
+      ).toHaveLength(2);
+    } finally {
+      document.execCommand = originalExecCommand;
+    }
+  });
+
+  it("round-trips a page break through both editor modes", () => {
+    const marker = "<!-- markdown:page-break -->";
+    const markdown = `Before\n\n${marker}\n\nAfter`;
+    const root = mountEditor({ content: markdown, mode: "markdown" });
+
+    root.querySelector<HTMLButtonElement>(".md-tab-button")?.click();
+    m.redraw.sync();
+    expect(
+      root.querySelector('[data-markdown-page-break="true"]'),
+    ).toBeTruthy();
+
+    root.querySelectorAll<HTMLButtonElement>(".md-tab-button")[1].click();
+    m.redraw.sync();
+    expect(root.querySelector("textarea")?.value).toBe(markdown);
+  });
+
+  it("pre-expands page breaks for custom markdown renderers", () => {
+    let rendererInput = "";
+    const root = mountEditor({
+      content: "Before\n\n<!-- markdown:page-break -->\n\nAfter",
+      mode: "wysiwyg",
+      markdownToHtml: (markdown) => {
+        rendererInput = markdown;
+        return markdown;
+      },
+    });
+
+    expect(rendererInput).toContain('data-markdown-page-break="true"');
+    expect(rendererInput).not.toContain("<!-- markdown:page-break -->");
+    expect(
+      root.querySelector('[data-markdown-page-break="true"]'),
+    ).toBeTruthy();
   });
 });

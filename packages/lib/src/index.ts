@@ -16,10 +16,7 @@ export {
   markdownToWysiwygHtml,
 } from "./utils/markdown-to-html";
 export { builtinHtmlToMarkdown } from "./utils/builtin-html-to-markdown";
-export {
-  PAGE_BREAK_HTML,
-  PAGE_BREAK_MARKER,
-} from "./utils/editor-content";
+export { PAGE_BREAK_HTML, PAGE_BREAK_MARKER } from "slimdown-js";
 
 // Re-exported so consumers who want to pass slimdown-js explicitly as
 // `markdownToHtml` (e.g. to override editor-specific options) don't need to

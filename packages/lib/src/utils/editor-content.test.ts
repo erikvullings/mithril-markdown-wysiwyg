@@ -8,7 +8,10 @@ import {
   restoreBase64Images,
   searchableDomText,
 } from "./editor-content";
-import { markdownToWysiwygHtml } from "./markdown-to-html";
+import {
+  markdownToHtml,
+  markdownToWysiwygHtml,
+} from "./markdown-to-html";
 import { builtinHtmlToMarkdown } from "./builtin-html-to-markdown";
 
 describe("editor structural content", () => {
@@ -65,6 +68,18 @@ describe("editor structural content", () => {
 
     expect(html).toContain(PAGE_BREAK_HTML);
     expect(builtinHtmlToMarkdown(html)).toContain(PAGE_BREAK_MARKER);
+  });
+
+  it("uses slimdown's native page-break extension hook", () => {
+    expect(
+      markdownToHtml(PAGE_BREAK_MARKER, {
+        extensions: [
+          {
+            renderPageBreak: () => '<hr data-custom-page-break="true">',
+          },
+        ],
+      }),
+    ).toBe('<hr data-custom-page-break="true">');
   });
 
   it("does not expand page-break marker examples inside code", () => {
@@ -141,6 +156,28 @@ describe("editor structural content", () => {
     expect(searchableDomText(root)).toBe("one\n\ntwo");
     expect(
       findTextMatches(searchableDomText(root), "onetwo", {
+        caseSensitive: false,
+        wholeWord: false,
+        regex: false,
+      }).matches,
+    ).toHaveLength(0);
+  });
+
+  it("searches across a page break without searching inside it", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<p>Before</p>${PAGE_BREAK_HTML}<p>After</p>`;
+    const text = searchableDomText(root);
+
+    expect(
+      findTextMatches(text, "Before|After", {
+        caseSensitive: false,
+        wholeWord: false,
+        regex: true,
+      }).matches,
+    ).toHaveLength(2);
+    expect(text).not.toContain("Page break");
+    expect(
+      findTextMatches(text, "BeforeAfter", {
         caseSensitive: false,
         wholeWord: false,
         regex: false,
