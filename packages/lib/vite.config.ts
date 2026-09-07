@@ -5,7 +5,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     build: {
-      emptyOutDir: !isUmdMin,
+      // `pnpm clean` already removes dist/ before build:types + build:bundle run,
+      // so Vite must never empty it again here or it wipes the generated .d.ts files.
+      emptyOutDir: false,
       minify: isUmdMin ? "terser" : false,
       lib: {
         entry: "src/index.ts",
