@@ -24,7 +24,7 @@ and WYSIWYG conversions previously risked joining `<br>` content into a soft Mar
 
 ## Agent Notes
 
-- Completed in `c0854b7` and subsequent working-tree refinements. Relevant files:
+- Completed in `c0854b7`. Relevant files:
   `packages/lib/src/editor-actions.ts`, `packages/lib/src/utils/builtin-html-to-markdown.ts`,
   `packages/lib/src/utils/editor-content.ts`, and their tests.
 - Fence recognition tracks marker type and opening length so tilde and long backtick fences are

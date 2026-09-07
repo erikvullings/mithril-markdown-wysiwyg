@@ -24,7 +24,7 @@ while the full payload must remain available for rendering and saving.
 
 ## Agent Notes
 
-- Completed in `c0854b7` and subsequent working-tree refinements. Relevant files:
+- Completed in `c0854b7`. Relevant files:
   `packages/lib/src/types.ts`, `packages/lib/src/editor.ts`, and
   `packages/lib/src/utils/editor-content.ts`.
 - Placeholder edits are protected; deleting the complete placeholder still intentionally removes

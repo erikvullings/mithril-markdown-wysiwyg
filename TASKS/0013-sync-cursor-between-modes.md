@@ -25,6 +25,6 @@ moving the cursor to the beginning or end of a long chapter.
 
 ## Agent Notes
 
-- Completed in `c0854b7` and subsequent working-tree refinements. Relevant files:
+- Completed in `c0854b7`. Relevant files:
   `packages/lib/src/editor.ts` and `packages/lib/src/utils/editor-content.ts`.
 - Regression coverage includes positions inside the second paragraph and immediately after a link.

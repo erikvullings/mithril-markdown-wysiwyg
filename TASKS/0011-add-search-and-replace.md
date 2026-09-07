@@ -24,7 +24,7 @@ Long EPUB chapters need an editor-local, VS Code-style search and replace contro
 
 ## Agent Notes
 
-- Completed in `c0854b7` and subsequent working-tree refinements. Relevant files:
+- Completed in `c0854b7`. Relevant files:
   `packages/lib/src/editor.ts`, `packages/lib/src/utils/editor-content.ts`,
   `packages/lib/src/i18n/index.ts`, and `packages/lib/src/styles.css`.
 - Zero-width Unicode regex matches advance by a complete code point; WYSIWYG indexing inserts

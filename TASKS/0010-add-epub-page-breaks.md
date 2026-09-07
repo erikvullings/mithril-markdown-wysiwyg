@@ -23,7 +23,7 @@ Authors need an explicit page-break command that survives Markdown, WYSIWYG HTML
 
 ## Agent Notes
 
-- Completed in `c0854b7` and subsequent working-tree refinements. Relevant files:
+- Completed in `c0854b7`. Relevant files:
   `packages/lib/src/toolbar-config.ts`, `packages/lib/src/editor-actions.ts`,
   `packages/lib/src/utils/editor-content.ts`, `packages/lib/src/utils/markdown-to-html.ts`,
   `packages/lib/src/utils/builtin-html-to-markdown.ts`, and `packages/lib/src/styles.css`.
