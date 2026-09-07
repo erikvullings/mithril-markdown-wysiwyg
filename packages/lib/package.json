@@ -1,6 +1,6 @@
 {
   "name": "mithril-markdown-wysiwyg",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A powerful WYSIWYG markdown editor for Mithril.js with dual-mode editing, theme support, and extensive formatting options",
   "keywords": [
     "mithril",
@@ -56,7 +56,10 @@
     "dev": "pnpm build:watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "pnpm build"
+    "sync:readme": "node -e \"require('node:fs').copyFileSync('../../README.md', 'README.md')\"",
+    "prepublishOnly": "pnpm build",
+    "prepack": "pnpm sync:readme",
+    "postpack": "node -e \"require('node:fs').rmSync('README.md', { force: true })\""
   },
   "peerDependencies": {
     "mithril": "^2.3.8"
