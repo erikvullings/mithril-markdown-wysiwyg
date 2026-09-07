@@ -19,3 +19,15 @@ see instructions handed to that repo's agent, not tracked as a task in this repo
 
 - [ ] 0007 Lightweight syntax highlighting for markdown source and code blocks
 - [ ] 0008 Markdown auto-formatting: table alignment + bullet-marker normalization
+
+## EPUB editor improvements
+
+These tasks document the completed EPUB-focused editor feature set delivered together.
+
+- [x] 0009 Preserve hard breaks and paragraphs
+- [x] 0010 Add EPUB page breaks
+- [x] 0011 Add search and replace
+- [x] 0012 Mask inline base64 images
+- [x] 0013 Synchronize cursor between editor modes
+- [x] 0014 Fix initial Markdown mode
+- [x] 0015 Support automatic light and dark themes
