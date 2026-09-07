@@ -1,6 +1,6 @@
 {
   "name": "mithril-markdown-wysiwyg",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "A powerful WYSIWYG markdown editor for Mithril.js with dual-mode editing, theme support, and extensive formatting options",
   "keywords": [
     "mithril",
@@ -62,7 +62,7 @@
     "mithril": "^2.3.8"
   },
   "dependencies": {
-    "slimdown-js": "^1.5.2"
+    "slimdown-js": "^1.5.3"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^7.0.0",

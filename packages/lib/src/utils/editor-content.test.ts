@@ -32,6 +32,32 @@ describe("editor structural content", () => {
     );
   });
 
+  it("keeps soft and hard continuations inside list items", () => {
+    const container = document.createElement("div");
+    container.innerHTML = markdownToWysiwygHtml(
+      "- soft\n  continuation\n- hard  \n  continuation",
+    );
+
+    const items = container.querySelectorAll("li");
+    expect(items).toHaveLength(2);
+    expect(items[0].textContent).toBe("soft continuation");
+    expect(items[0].querySelector("br")).toBeNull();
+    expect(items[1].innerHTML).toBe("hard<br>continuation");
+  });
+
+  it("keeps soft and hard continuations distinct inside blockquotes", () => {
+    const soft = document.createElement("div");
+    soft.innerHTML = markdownToWysiwygHtml("> first\n> second");
+    const hard = document.createElement("div");
+    hard.innerHTML = markdownToWysiwygHtml("> first  \n> second");
+
+    expect(soft.querySelector("blockquote")?.textContent).toBe("first\nsecond");
+    expect(soft.querySelector("blockquote br")).toBeNull();
+    expect(hard.querySelector("blockquote")?.innerHTML).toBe(
+      "first<br>second",
+    );
+  });
+
   it("round-trips page breaks through editor HTML", () => {
     const html = markdownToWysiwygHtml(
       `before\n\n${PAGE_BREAK_MARKER}\n\nafter`,

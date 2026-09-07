@@ -407,7 +407,10 @@ const App = () => {
                 "li",
                 "🔌 Pluggable renderers: Use marked.js, slimdown-js, or any custom renderer",
               ),
-              m("li", "📦 Clean architecture: lib has zero dependencies"),
+              m(
+                "li",
+                "📦 Built-in slimdown-js renderer with no extra setup",
+              ),
               m("li", "🛠️ Full toolbar with proper grouping and separators"),
               m("li", "🌓 Dark theme support with proper contrast"),
               m("li", "📱 Responsive design for mobile and desktop"),
