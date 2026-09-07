@@ -18,6 +18,20 @@ describe("editor structural content", () => {
     );
   });
 
+  it.each([
+    ["LF", "first  \nsecond"],
+    ["CRLF", "first  \r\nsecond"],
+    ["three trailing spaces", "first   \nsecond"],
+  ])("renders %s hard breaks inside one paragraph", (_name, markdown) => {
+    const container = document.createElement("div");
+    container.innerHTML = markdownToWysiwygHtml(markdown);
+
+    expect(container.querySelectorAll("p")).toHaveLength(1);
+    expect(container.querySelector("p")?.innerHTML.trim()).toBe(
+      "first<br>second",
+    );
+  });
+
   it("round-trips page breaks through editor HTML", () => {
     const html = markdownToWysiwygHtml(
       `before\n\n${PAGE_BREAK_MARKER}\n\nafter`,
