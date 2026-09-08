@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyMaskedMarkdownEdit,
   findTextMatches,
+  getMaskedClipboardText,
   maskBase64Images,
   PAGE_BREAK_HTML,
   PAGE_BREAK_MARKER,
@@ -147,6 +148,72 @@ describe("editor structural content", () => {
         masked.hiddenImages,
       ),
     ).toBe("start ![cover](data:image/png;base64,AAABBB===) end");
+  });
+
+  it("expands a fully selected hidden image placeholder for clipboard copy", () => {
+    const markdown = "before ![cover](data:image/png;base64,AAABBB===) after";
+    const masked = maskBase64Images(markdown);
+
+    expect(
+      getMaskedClipboardText(
+        masked.display,
+        masked.hiddenImages,
+        0,
+        masked.display.length,
+      ),
+    ).toBe(markdown);
+  });
+
+  it("expands only the placeholders wholly inside a partial selection", () => {
+    const markdown =
+      "one ![a](data:image/png;base64,AAA===) two ![b](data:image/png;base64,BBB===) three";
+    const masked = maskBase64Images(markdown);
+    // Select from just before the first placeholder image markup through
+    // "two", stopping short of the second image entirely.
+    const start = masked.display.indexOf("![a]");
+    const end = masked.display.indexOf("![b]");
+
+    expect(
+      getMaskedClipboardText(masked.display, masked.hiddenImages, start, end),
+    ).toBe("![a](data:image/png;base64,AAA===) two ");
+  });
+
+  it("leaves a partially selected placeholder's raw characters untouched", () => {
+    const markdown = "before ![cover](data:image/png;base64,AAABBB===) after";
+    const masked = maskBase64Images(markdown);
+    const placeholderStart = masked.display.indexOf(
+      "data:image/png;base64,{hidden",
+    );
+    // Select from partway through the placeholder to partway past it, i.e.
+    // an intersection that does not wholly cover the placeholder.
+    const start = placeholderStart + 5;
+    const end = masked.display.indexOf(") after") + 1;
+
+    const clipboardText = getMaskedClipboardText(
+      masked.display,
+      masked.hiddenImages,
+      start,
+      end,
+    );
+
+    expect(clipboardText).toBe(masked.display.slice(start, end));
+    expect(clipboardText).not.toContain("AAABBB");
+    expect(clipboardText).not.toMatch(/data:image\/png;base64,(?!\{)/);
+  });
+
+  it("returns the selected slice unchanged when there are no hidden images", () => {
+    const markdown = "plain text with no images";
+
+    expect(getMaskedClipboardText(markdown, [], 6, 10)).toBe("text");
+  });
+
+  it("returns an empty string for a collapsed selection", () => {
+    const markdown = "before ![cover](data:image/png;base64,AAABBB===) after";
+    const masked = maskBase64Images(markdown);
+
+    expect(
+      getMaskedClipboardText(masked.display, masked.hiddenImages, 4, 4),
+    ).toBe("");
   });
 
   it("keeps paragraph boundaries searchable as separate text", () => {

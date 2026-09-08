@@ -103,6 +103,135 @@ describe("MarkdownEditor modes", () => {
     );
   });
 
+  const dispatchCopy = (
+    element: HTMLElement,
+  ): { text: string; defaultPrevented: boolean } => {
+    let text = "";
+    const clipboardData = {
+      setData: (type: string, value: string) => {
+        if (type === "text/plain") text = value;
+      },
+      getData: () => "",
+    };
+    const event = new Event("copy", {
+      bubbles: true,
+      cancelable: true,
+    }) as Event & { clipboardData: typeof clipboardData };
+    Object.defineProperty(event, "clipboardData", { value: clipboardData });
+    element.dispatchEvent(event);
+    return { text, defaultPrevented: event.defaultPrevented };
+  };
+
+  it("copies the original data URI for a fully selected hidden image placeholder", () => {
+    const source = "before ![cover](data:image/png;base64,AAABBBCCC===) after";
+    const root = mountEditor({
+      content: source,
+      mode: "markdown",
+      hideBase64Images: true,
+    });
+    const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, textarea.value.length);
+    const { text, defaultPrevented } = dispatchCopy(textarea);
+
+    expect(defaultPrevented).toBe(true);
+    expect(text).toBe(source);
+  });
+
+  it("does not intercept a selection that only partially overlaps a placeholder", () => {
+    const source = "before ![cover](data:image/png;base64,AAABBBCCC===) after";
+    const root = mountEditor({
+      content: source,
+      mode: "markdown",
+      hideBase64Images: true,
+    });
+    const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+
+    const placeholderStart = textarea.value.indexOf(
+      "data:image/png;base64,{hidden",
+    );
+    textarea.setSelectionRange(placeholderStart + 5, textarea.value.length);
+    const { text, defaultPrevented } = dispatchCopy(textarea);
+
+    // Left to the browser's native copy: nothing was written through our
+    // handler, and the raw (safe, non-malformed) placeholder text was never
+    // touched.
+    expect(defaultPrevented).toBe(false);
+    expect(text).toBe("");
+  });
+
+  it("does not intercept copy when hideBase64Images is false", () => {
+    const source = "before ![cover](data:image/png;base64,AAABBBCCC===) after";
+    const root = mountEditor({
+      content: source,
+      mode: "markdown",
+      hideBase64Images: false,
+    });
+    const textarea = root.querySelector("textarea") as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, textarea.value.length);
+    const { text, defaultPrevented } = dispatchCopy(textarea);
+
+    expect(defaultPrevented).toBe(false);
+    expect(text).toBe("");
+  });
+
+  it("does not intercept copy in WYSIWYG mode", () => {
+    const source = "before ![cover](data:image/png;base64,AAABBBCCC===) after";
+    const root = mountEditor({
+      content: source,
+      mode: "wysiwyg",
+      hideBase64Images: true,
+    });
+    const editable = root.querySelector(
+      ".md-editable-area",
+    ) as HTMLElement;
+
+    const { text, defaultPrevented } = dispatchCopy(editable);
+
+    expect(defaultPrevented).toBe(false);
+    expect(text).toBe("");
+  });
+
+  it("round-trips a hidden image between two editor instances via copy and paste", () => {
+    const source = "before ![cover](data:image/png;base64,AAABBBCCC===) after";
+    const rootA = mountEditor({
+      content: source,
+      mode: "markdown",
+      hideBase64Images: true,
+    });
+    const textareaA = rootA.querySelector("textarea") as HTMLTextAreaElement;
+    textareaA.setSelectionRange(0, textareaA.value.length);
+    const { text: copiedText } = dispatchCopy(textareaA);
+    expect(copiedText).toBe(source);
+
+    let changedB = "";
+    const rootB = mountEditor({
+      content: "",
+      mode: "markdown",
+      hideBase64Images: true,
+      onContentChange: (content) => {
+        changedB = content;
+      },
+    });
+    const textareaB = rootB.querySelector("textarea") as HTMLTextAreaElement;
+    // Simulate the browser having already pasted `copiedText` into the
+    // (empty) textarea, then dispatch the resulting native `input` event -
+    // jsdom doesn't perform real clipboard pastes, so this reproduces what
+    // the browser would have done to the DOM before `oninput` fires.
+    textareaB.value = copiedText;
+    textareaB.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(changedB).toBe(source);
+
+    m.redraw.sync();
+    const redrawnTextareaB = rootB.querySelector(
+      "textarea",
+    ) as HTMLTextAreaElement;
+    expect(redrawnTextareaB.value).toContain("hidden image 1");
+    expect(redrawnTextareaB.value).not.toContain("AAABBBCCC");
+  });
+
   it("opens find and replace from platform shortcuts", () => {
     const root = mountEditor({
       content: "one two one",

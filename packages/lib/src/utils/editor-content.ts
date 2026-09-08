@@ -167,6 +167,61 @@ export const applyMaskedMarkdownEdit = (
   );
 };
 
+/**
+ * Build the `text/plain` clipboard payload for a copy from the masked
+ * Markdown textarea (`start`/`end` are display-string indices, e.g. the
+ * textarea's `selectionStart`/`selectionEnd`).
+ *
+ * A hidden image placeholder that is selected in its entirety is expanded
+ * back to its original data URI so copying Markdown out - and pasting it
+ * back in, here or elsewhere - never loses the image data. A placeholder
+ * that is only partially covered by the selection is left as the raw
+ * selected characters rather than assembled into a new, truncated data URI:
+ * this mirrors the guarded partial-edit behavior of
+ * `applyMaskedMarkdownEdit`, which similarly refuses to touch a placeholder
+ * it can't safely resolve. All other selected text (including a wholly
+ * unselected placeholder's untouched characters) passes through unchanged.
+ */
+export const getMaskedClipboardText = (
+  display: string,
+  hiddenImages: HiddenBase64Image[],
+  start: number,
+  end: number,
+): string => {
+  if (start >= end || hiddenImages.length === 0) {
+    return display.slice(start, end);
+  }
+
+  const positioned = hiddenImages
+    .map((image) => {
+      const placeholderStart = display.indexOf(image.placeholder);
+      return placeholderStart < 0
+        ? null
+        : {
+            image,
+            placeholderStart,
+            placeholderEnd: placeholderStart + image.placeholder.length,
+          };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .sort((a, b) => a.placeholderStart - b.placeholderStart);
+
+  let result = "";
+  let cursor = start;
+
+  for (const { image, placeholderStart, placeholderEnd } of positioned) {
+    const fullySelected = placeholderStart >= start && placeholderEnd <= end;
+    if (!fullySelected) continue;
+
+    result += display.slice(cursor, placeholderStart);
+    result += image.source;
+    cursor = placeholderEnd;
+  }
+
+  result += display.slice(cursor, end);
+  return result;
+};
+
 export const displayIndexToSourceIndex = (
   display: string,
   displayIndex: number,
