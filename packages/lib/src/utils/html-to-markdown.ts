@@ -361,7 +361,10 @@ export class HTMLToMarkdownConverter {
    */
   private processHeaders(markdown: string): string {
     for (let level = 6; level >= 1; level--) {
-      const regex = new RegExp(`<h${level}[^>]*>([\s\S]*?)<\/h${level}>`, "gi");
+      const regex = new RegExp(
+        `<h${level}[^>]*>([\\s\\S]*?)<\\/h${level}>`,
+        "gi",
+      );
 
       markdown = markdown.replace(regex, (_, content) => {
         const cleanContent = this.processHTML(content).trim();
