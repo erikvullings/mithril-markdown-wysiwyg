@@ -24,6 +24,7 @@ import {
   displayIndexToSourceIndex,
   expandPageBreakMarkers,
   findTextMatches,
+  getMaskedClipboardText,
   isInsideFencedCode,
   isPageBreakMarkerLine,
   maskBase64Images,
@@ -372,6 +373,40 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
           wysiwygContent = safeMarkdownToHtml(newContent, markdownToHtml);
           onContentChange?.(markdownContent);
         }
+      };
+
+      // Copying a Markdown selection should never hand the user a hidden
+      // image *placeholder* instead of its real data - that would silently
+      // lose the image on paste elsewhere. When the selection wholly
+      // contains one or more placeholders, put their original data URIs on
+      // the clipboard instead. A selection that only partially overlaps a
+      // placeholder is left to the browser's default copy: `display` never
+      // contains a malformed/truncated data URI in the first place, so
+      // there's nothing unsafe to guard against there (see
+      // `getMaskedClipboardText`'s docs for the full rationale).
+      const handleMarkdownCopy = (event: Event) => {
+        if (!hideBase64Images || activeHiddenImages.length === 0) return;
+        const textarea = editorActions?.getTextarea();
+        if (!textarea) return;
+        const { selectionStart, selectionEnd } = textarea;
+        if (selectionStart === selectionEnd) return;
+
+        const rawSelection = activeMaskedDisplay.slice(
+          selectionStart,
+          selectionEnd,
+        );
+        const clipboardText = getMaskedClipboardText(
+          activeMaskedDisplay,
+          activeHiddenImages,
+          selectionStart,
+          selectionEnd,
+        );
+        if (clipboardText === rawSelection) return;
+
+        const clipboardEvent = event as ClipboardEvent;
+        if (!clipboardEvent.clipboardData) return;
+        clipboardEvent.preventDefault();
+        clipboardEvent.clipboardData.setData("text/plain", clipboardText);
       };
 
       if (!editorActions) {
@@ -1057,6 +1092,7 @@ export const MarkdownEditor: FactoryComponent<MarkdownEditorAttrs> = () => {
                         target.focus();
                       },
                       onpaste: (e: Event) => editorActions?.handlePaste(e),
+                      oncopy: handleMarkdownCopy,
                       oncreate: (vnode: m.VnodeDOM) => {
                         const textarea = vnode.dom as HTMLTextAreaElement;
                         editorActions?.setTextarea(textarea);

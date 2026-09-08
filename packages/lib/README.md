@@ -94,6 +94,19 @@ Set `hideBase64Images: true` to replace inline base64 payloads with compact,
 size-labelled placeholders in Markdown mode. The original data remains in the
 editor value and images continue to render normally in WYSIWYG mode.
 
+Copying a Markdown selection that fully contains one or more hidden image
+placeholders writes their original data URIs to the clipboard (`text/plain`)
+instead of the placeholder text, so copy/paste round-trips the real image
+data - both within the same editor and between two editor instances. A
+selection that only partially overlaps a placeholder falls back to the
+browser's ordinary copy of the selected characters, which is always safe
+since `display` never contains a truncated or otherwise malformed data URI.
+Pasting Markdown that contains a real base64 data URI stores the real data
+in the editor value; the textarea immediately re-masks it back to a
+placeholder on the next render. This behavior only applies to the Markdown
+textarea when `hideBase64Images: true`; WYSIWYG-mode copy/paste is
+unaffected.
+
 ### Search and replace
 
 Use `Cmd+F`/`Ctrl+F` for find and `Cmd+H`/`Ctrl+H` for find and replace.
