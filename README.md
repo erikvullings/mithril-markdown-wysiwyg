@@ -335,6 +335,13 @@ pnpm build
 pnpm test
 ```
 
+### Releasing
+
+Releases are automated with `semantic-release` and published to npm using
+[trusted publishing (OIDC)](https://docs.npmjs.com/trusted-publishers) — no npm token is
+stored in the repository. See [`RELEASING.md`](./RELEASING.md) for how releases are
+triggered and the one-time npm-side trusted publisher configuration.
+
 ## Contributing
 
 1. Fork the repository
