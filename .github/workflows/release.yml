@@ -27,7 +27,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
+          # NOTE: deliberately no `registry-url` here. actions/setup-node writes
+          # an .npmrc containing a literal `_authToken` placeholder when
+          # `registry-url` is set, which conflicts with @semantic-release/npm's
+          # own npm authentication (OIDC trusted publishing + token fallback)
+          # and can cause spurious EINVALIDNPMTOKEN errors. See:
+          # https://semantic-release.gitbook.io/semantic-release/recipes/ci-configurations/github-actions
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -43,6 +48,13 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Ensure npm CLI supports OIDC trusted publishing
+        if: github.event_name == 'workflow_dispatch'
+        # npm trusted publishing (OIDC) requires npm CLI >= 11.5.1; the npm
+        # version bundled with actions/setup-node's Node 22 may be older, so
+        # upgrade it explicitly before semantic-release invokes `npm publish`.
+        run: npm install -g npm@latest
+
       - name: Semantic Release
         if: github.event_name == 'workflow_dispatch'
         uses: cycjimmy/semantic-release-action@v4
@@ -50,7 +62,6 @@ jobs:
           working_directory: ./packages/lib
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   deploy-docs:
     runs-on: ubuntu-latest
